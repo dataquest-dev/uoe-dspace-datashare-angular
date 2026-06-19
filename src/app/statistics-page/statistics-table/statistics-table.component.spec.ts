@@ -96,5 +96,62 @@ describe('StatisticsTableComponent', () => {
       expect(de.query(By.css('td.item_2-downloads-data')).nativeElement.innerText)
         .toEqual('8');
     });
+
+    it('should not display a pagination control when all points fit on a single page', () => {
+      expect(de.query(By.css('ngb-pagination'))).toBeNull();
+    });
+  });
+
+  describe('when the report has more points than the page size', () => {
+
+    const numberOfPoints = 25;
+
+    beforeEach(() => {
+      const points = [];
+      for (let i = 0; i < numberOfPoints; i++) {
+        points.push({
+          id: `item_${i}`,
+          label: `item_${i}`,
+          values: {
+            views: i,
+          },
+        });
+      }
+      component.report = Object.assign(new UsageReport(), { points });
+      component.ngOnInit();
+      fixture.detectChanges();
+    });
+
+    it('should only render the first page of points', () => {
+      expect(de.queryAll(By.css('[data-test="statistics-label"]')).length)
+        .toEqual(component.pageSize);
+      expect(de.query(By.css('td.item_0-views-data'))).toBeTruthy();
+      expect(de.query(By.css('td.item_10-views-data'))).toBeNull();
+    });
+
+    it('should display a pagination control', () => {
+      expect(de.query(By.css('ngb-pagination'))).toBeTruthy();
+    });
+
+    it('should render the next page of points when the page changes', () => {
+      component.onPageChange(2);
+      fixture.detectChanges();
+
+      expect(de.query(By.css('td.item_0-views-data'))).toBeNull();
+      expect(de.query(By.css('td.item_10-views-data'))).toBeTruthy();
+      expect(de.queryAll(By.css('[data-test="statistics-label"]')).length)
+        .toEqual(component.pageSize);
+    });
+
+    it('should render the remaining points on the last page', () => {
+      const lastPage = Math.ceil(numberOfPoints / component.pageSize);
+      component.onPageChange(lastPage);
+      fixture.detectChanges();
+
+      const remaining = numberOfPoints - (lastPage - 1) * component.pageSize;
+      expect(de.queryAll(By.css('[data-test="statistics-label"]')).length)
+        .toEqual(remaining);
+      expect(de.query(By.css(`td.item_${numberOfPoints - 1}-views-data`))).toBeTruthy();
+    });
   });
 });

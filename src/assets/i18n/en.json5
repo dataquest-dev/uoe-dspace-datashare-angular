@@ -4794,6 +4794,8 @@
 
   "statistics.table.no-data": "No data available",
 
+  "statistics.table.pagination.label": "Statistics table pagination",
+
   "statistics.table.title.TotalVisits": "Total visits",
 
   "statistics.table.title.TotalVisitsPerMonth": "Total visits per month",

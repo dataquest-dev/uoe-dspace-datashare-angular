@@ -18,7 +18,7 @@
       </th>
     </tr>
 
-    <tr *ngFor="let point of report.points"
+    <tr *ngFor="let point of paginatedPoints"
         class="{{point.id}}-data">
       <th scope="row" data-test="statistics-label">
         {{ getLabel(point) | async }}
@@ -32,5 +32,19 @@
     </tbody>
 
   </table>
+
+  <div *ngIf="showPagination"
+       class="d-flex justify-content-center">
+    <ngb-pagination [collectionSize]="report.points.length"
+                    [page]="currentPage"
+                    [pageSize]="pageSize"
+                    [maxSize]="5"
+                    [rotate]="true"
+                    [ellipses]="true"
+                    [boundaryLinks]="true"
+                    (pageChange)="onPageChange($event)"
+                    [attr.aria-label]="'statistics.table.pagination.label' | translate">
+    </ngb-pagination>
+  </div>
 
 </div>
