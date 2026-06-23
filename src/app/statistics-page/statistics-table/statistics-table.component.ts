@@ -93,8 +93,9 @@ export class StatisticsTableComponent implements OnInit {
     }
 
     this.paginationOptions = Object.assign(new PaginationComponentOptions(), {
-      // Unique per report so multiple tables on one statistics page paginate independently
-      id: `stats-${this.report.reportType}`,
+      // Unique per report AND scope so multiple tables paginate independently and a report doesn't pick up
+      // another scope's page from the URL. report.id is `<dso-uuid>_<reportType>`, e.g. `<uuid>_TotalVisits`.
+      id: `stats-${this.report.id}`,
       pageSize: this.pageSize,
       currentPage: 1,
     });

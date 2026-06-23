@@ -32,6 +32,8 @@ import { StatisticsTableComponent } from './statistics-table.component';
 class MockPaginationComponent {
   @Input() paginationOptions: PaginationComponentOptions;
   @Input() collectionSize: number;
+  @Input() hideGear: boolean;
+  @Input() hidePaginationDetail: boolean;
   @Input() hideSortOptions: boolean;
   @Input() retainScrollPosition: boolean;
 }

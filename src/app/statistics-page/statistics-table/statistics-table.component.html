@@ -7,6 +7,8 @@
 
   <ds-pagination [paginationOptions]="paginationOptions"
                  [collectionSize]="report.points.length"
+                 [hideGear]="true"
+                 [hidePaginationDetail]="report.points.length <= pageSize"
                  [hideSortOptions]="true"
                  [retainScrollPosition]="true">
 
