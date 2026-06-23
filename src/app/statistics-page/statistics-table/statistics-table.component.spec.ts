@@ -1,4 +1,8 @@
-import { DebugElement } from '@angular/core';
+import {
+  Component,
+  DebugElement,
+  Input,
+} from '@angular/core';
 import {
   ComponentFixture,
   TestBed,
@@ -6,19 +10,50 @@ import {
 } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
+import { BehaviorSubject } from 'rxjs';
 
 import { DSONameService } from '../../core/breadcrumbs/dso-name.service';
 import { DSpaceObjectDataService } from '../../core/data/dspace-object-data.service';
+import { PaginationService } from '../../core/pagination/pagination.service';
 import { UsageReport } from '../../core/statistics/models/usage-report.model';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginationComponentOptions } from '../../shared/pagination/pagination-component-options.model';
 import { StatisticsTableComponent } from './statistics-table.component';
+
+/**
+ * Lightweight stand-in for ds-pagination so the table can be tested in isolation; the current page is
+ * driven through the (mocked) PaginationService, exactly as the real component does via the URL.
+ */
+@Component({
+  selector: 'ds-pagination',
+  standalone: true,
+  template: '<ng-content></ng-content>',
+})
+class MockPaginationComponent {
+  @Input() paginationOptions: PaginationComponentOptions;
+  @Input() collectionSize: number;
+  @Input() hideSortOptions: boolean;
+  @Input() retainScrollPosition: boolean;
+}
 
 describe('StatisticsTableComponent', () => {
 
   let component: StatisticsTableComponent;
   let de: DebugElement;
   let fixture: ComponentFixture<StatisticsTableComponent>;
+  let currentPagination$: BehaviorSubject<PaginationComponentOptions>;
+
+  const paginationService = {
+    getCurrentPagination: (_id: string, _options: PaginationComponentOptions) => currentPagination$.asObservable(),
+  };
+
+  const setPage = (currentPage: number, pageSize = 10) => {
+    currentPagination$.next(Object.assign(new PaginationComponentOptions(), { currentPage, pageSize }));
+  };
 
   beforeEach(waitForAsync(() => {
+    currentPagination$ = new BehaviorSubject(Object.assign(new PaginationComponentOptions(), { currentPage: 1, pageSize: 10 }));
+
     TestBed.configureTestingModule({
       imports: [
         TranslateModule.forRoot(),
@@ -27,8 +62,13 @@ describe('StatisticsTableComponent', () => {
       providers: [
         { provide: DSpaceObjectDataService, useValue: {} },
         { provide: DSONameService, useValue: {} },
+        { provide: PaginationService, useValue: paginationService },
       ],
     })
+      .overrideComponent(StatisticsTableComponent, {
+        remove: { imports: [PaginationComponent] },
+        add: { imports: [MockPaginationComponent] },
+      })
       .compileComponents();
   }));
 
@@ -50,6 +90,10 @@ describe('StatisticsTableComponent', () => {
 
     it ('should not display a table', () => {
       expect(de.query(By.css('table'))).toBeNull();
+    });
+
+    it('should not display a pagination control', () => {
+      expect(de.query(By.directive(MockPaginationComponent))).toBeNull();
     });
   });
 
@@ -97,8 +141,10 @@ describe('StatisticsTableComponent', () => {
         .toEqual('8');
     });
 
-    it('should not display a pagination control when all points fit on a single page', () => {
-      expect(de.query(By.css('ngb-pagination'))).toBeNull();
+    it('should wrap the table in a ds-pagination control with the report size', () => {
+      const pagination = de.query(By.directive(MockPaginationComponent));
+      expect(pagination).toBeTruthy();
+      expect(pagination.componentInstance.collectionSize).toEqual(2);
     });
   });
 
@@ -122,6 +168,11 @@ describe('StatisticsTableComponent', () => {
       fixture.detectChanges();
     });
 
+    it('should pass the full report size to the pagination control', () => {
+      expect(de.query(By.directive(MockPaginationComponent)).componentInstance.collectionSize)
+        .toEqual(numberOfPoints);
+    });
+
     it('should only render the first page of points', () => {
       expect(de.queryAll(By.css('[data-test="statistics-label"]')).length)
         .toEqual(component.pageSize);
@@ -129,12 +180,8 @@ describe('StatisticsTableComponent', () => {
       expect(de.query(By.css('td.item_10-views-data'))).toBeNull();
     });
 
-    it('should display a pagination control', () => {
-      expect(de.query(By.css('ngb-pagination'))).toBeTruthy();
-    });
-
-    it('should render the next page of points when the page changes', () => {
-      component.onPageChange(2);
+    it('should render the next page of points when the current page changes', () => {
+      setPage(2);
       fixture.detectChanges();
 
       expect(de.query(By.css('td.item_0-views-data'))).toBeNull();
@@ -145,7 +192,7 @@ describe('StatisticsTableComponent', () => {
 
     it('should render the remaining points on the last page', () => {
       const lastPage = Math.ceil(numberOfPoints / component.pageSize);
-      component.onPageChange(lastPage);
+      setPage(lastPage);
       fixture.detectChanges();
 
       const remaining = numberOfPoints - (lastPage - 1) * component.pageSize;

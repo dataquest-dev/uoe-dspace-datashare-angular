@@ -5,46 +5,39 @@
     {{ 'statistics.table.title.' + report.reportType | translate }}
   </h2>
 
-  <table class="table table-striped" [attr.data-test]="report.reportType">
+  <ds-pagination [paginationOptions]="paginationOptions"
+                 [collectionSize]="report.points.length"
+                 [hideSortOptions]="true"
+                 [retainScrollPosition]="true">
 
-    <tbody>
+    <table class="table table-striped" [attr.data-test]="report.reportType">
 
-    <tr>
-      <td></td>
-      <th scope="col"
-          *ngFor="let header of headers"
-          class="{{header}}-header">
-        {{ header }}
-      </th>
-    </tr>
+      <tbody>
 
-    <tr *ngFor="let point of paginatedPoints"
-        class="{{point.id}}-data">
-      <th scope="row" data-test="statistics-label">
-        {{ getLabel(point) | async }}
-      </th>
-      <td *ngFor="let header of headers"
-          class="{{point.id}}-{{header}}-data">
-        {{ point.values[header] }}
-      </td>
-    </tr>
+      <tr>
+        <td></td>
+        <th scope="col"
+            *ngFor="let header of headers"
+            class="{{header}}-header">
+          {{ header }}
+        </th>
+      </tr>
 
-    </tbody>
+      <tr *ngFor="let point of (paginatedPoints$ | async)"
+          class="{{point.id}}-data">
+        <th scope="row" data-test="statistics-label">
+          {{ getLabel(point) | async }}
+        </th>
+        <td *ngFor="let header of headers"
+            class="{{point.id}}-{{header}}-data">
+          {{ point.values[header] }}
+        </td>
+      </tr>
 
-  </table>
+      </tbody>
 
-  <div *ngIf="showPagination"
-       class="d-flex justify-content-center">
-    <ngb-pagination [collectionSize]="report.points.length"
-                    [page]="currentPage"
-                    [pageSize]="pageSize"
-                    [maxSize]="5"
-                    [rotate]="true"
-                    [ellipses]="true"
-                    [boundaryLinks]="true"
-                    (pageChange)="onPageChange($event)"
-                    [attr.aria-label]="'statistics.table.pagination.label' | translate">
-    </ngb-pagination>
-  </div>
+    </table>
+
+  </ds-pagination>
 
 </div>
