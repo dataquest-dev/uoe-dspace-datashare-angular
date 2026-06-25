@@ -185,6 +185,14 @@ describe('StatisticsTableComponent', () => {
       expect(pagination.paginationOptions.pageSizeOptions).toEqual([10, 20, 40, 60, 80, 100]);
     });
 
+    it('should render more rows when a larger page size is selected', () => {
+      setPage(1, 20);
+      fixture.detectChanges();
+
+      expect(de.queryAll(By.css('[data-test="statistics-label"]')).length).toEqual(20);
+      expect(de.query(By.css('td.item_19-views-data'))).toBeTruthy();
+    });
+
     it('should only render the first page of points', () => {
       expect(de.queryAll(By.css('[data-test="statistics-label"]')).length)
         .toEqual(component.pageSize);
