@@ -2,6 +2,12 @@ th, td {
   padding: 0.5rem;
 }
 
+// Space below the pagination top bar (results-per-page gear + "showing" detail)
+// so it isn't glued to the table above it.
+:host ::ng-deep ds-pagination .pagination-masked.top {
+  margin-bottom: 0.75rem;
+}
+
 td {
   width: 50px;
   max-width: 50px;
