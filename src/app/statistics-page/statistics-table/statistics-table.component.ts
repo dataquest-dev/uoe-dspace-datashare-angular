@@ -96,7 +96,9 @@ export class StatisticsTableComponent implements OnInit {
       // Unique per report AND scope so multiple tables paginate independently and a report doesn't pick up
       // another scope's page from the URL. report.id is `<dso-uuid>_<reportType>`, e.g. `<uuid>_TotalVisits`.
       id: `stats-${this.report.id}`,
+      // pageSize is the default; users can change it via the ds-pagination "results per page" selector.
       pageSize: this.pageSize,
+      pageSizeOptions: [10, 20, 40, 60, 80, 100],
       currentPage: 1,
     });
 

@@ -148,6 +148,10 @@ describe('StatisticsTableComponent', () => {
       expect(pagination).toBeTruthy();
       expect(pagination.componentInstance.collectionSize).toEqual(2);
     });
+
+    it('should hide the page-size selector when everything fits on a single page', () => {
+      expect(de.query(By.directive(MockPaginationComponent)).componentInstance.hideGear).toBeTrue();
+    });
   });
 
   describe('when the report has more points than the page size', () => {
@@ -173,6 +177,12 @@ describe('StatisticsTableComponent', () => {
     it('should pass the full report size to the pagination control', () => {
       expect(de.query(By.directive(MockPaginationComponent)).componentInstance.collectionSize)
         .toEqual(numberOfPoints);
+    });
+
+    it('should offer the page-size selector with its options when there is more than one page', () => {
+      const pagination = de.query(By.directive(MockPaginationComponent)).componentInstance;
+      expect(pagination.hideGear).toBeFalse();
+      expect(pagination.paginationOptions.pageSizeOptions).toEqual([10, 20, 40, 60, 80, 100]);
     });
 
     it('should only render the first page of points', () => {
