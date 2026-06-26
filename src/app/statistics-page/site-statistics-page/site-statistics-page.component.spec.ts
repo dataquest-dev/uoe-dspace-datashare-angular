@@ -17,6 +17,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { DSONameService } from '../../core/breadcrumbs/dso-name.service';
 import { DSpaceObjectDataService } from '../../core/data/dspace-object-data.service';
 import { SiteDataService } from '../../core/data/site-data.service';
+import { PaginationService } from '../../core/pagination/pagination.service';
 import { Site } from '../../core/shared/site.model';
 import { UsageReport } from '../../core/statistics/models/usage-report.model';
 import { UsageReportDataService } from '../../core/statistics/usage-report-data.service';
@@ -83,6 +84,7 @@ describe('SiteStatisticsPageComponent', () => {
         { provide: DSONameService, useValue: nameService },
         { provide: SiteDataService, useValue: siteService },
         { provide: AuthService, useValue: authService },
+        { provide: PaginationService, useValue: { getCurrentPagination: () => observableOf({ currentPage: 1, pageSize: 10 }) } },
       ],
     })
       .compileComponents();

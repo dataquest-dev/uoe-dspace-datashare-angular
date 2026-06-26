@@ -5,32 +5,41 @@
     {{ 'statistics.table.title.' + report.reportType | translate }}
   </h2>
 
-  <table class="table table-striped" [attr.data-test]="report.reportType">
+  <ds-pagination [paginationOptions]="paginationOptions"
+                 [collectionSize]="report.points.length"
+                 [hideGear]="report.points.length <= pageSize"
+                 [hidePaginationDetail]="report.points.length <= pageSize"
+                 [hideSortOptions]="true"
+                 [retainScrollPosition]="true">
 
-    <tbody>
+    <table class="table table-striped" [attr.data-test]="report.reportType">
 
-    <tr>
-      <td></td>
-      <th scope="col"
-          *ngFor="let header of headers"
-          class="{{header}}-header">
-        {{ header }}
-      </th>
-    </tr>
+      <tbody>
 
-    <tr *ngFor="let point of report.points"
-        class="{{point.id}}-data">
-      <th scope="row" data-test="statistics-label">
-        {{ getLabel(point) | async }}
-      </th>
-      <td *ngFor="let header of headers"
-          class="{{point.id}}-{{header}}-data">
-        {{ point.values[header] }}
-      </td>
-    </tr>
+      <tr>
+        <td></td>
+        <th scope="col"
+            *ngFor="let header of headers"
+            class="{{header}}-header">
+          {{ header }}
+        </th>
+      </tr>
 
-    </tbody>
+      <tr *ngFor="let point of (paginatedPoints$ | async)"
+          class="{{point.id}}-data">
+        <th scope="row" data-test="statistics-label">
+          {{ getLabel(point) | async }}
+        </th>
+        <td *ngFor="let header of headers"
+            class="{{point.id}}-{{header}}-data">
+          {{ point.values[header] }}
+        </td>
+      </tr>
 
-  </table>
+      </tbody>
+
+    </table>
+
+  </ds-pagination>
 
 </div>

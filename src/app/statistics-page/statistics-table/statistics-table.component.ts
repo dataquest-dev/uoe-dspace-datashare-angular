@@ -20,6 +20,7 @@ import { map } from 'rxjs/operators';
 
 import { DSONameService } from '../../core/breadcrumbs/dso-name.service';
 import { DSpaceObjectDataService } from '../../core/data/dspace-object-data.service';
+import { PaginationService } from '../../core/pagination/pagination.service';
 import {
   getFinishedRemoteData,
   getRemoteDataPayload,
@@ -29,6 +30,8 @@ import {
   UsageReport,
 } from '../../core/statistics/models/usage-report.model';
 import { isEmpty } from '../../shared/empty.util';
+import { PaginationComponent } from '../../shared/pagination/pagination.component';
+import { PaginationComponentOptions } from '../../shared/pagination/pagination-component-options.model';
 
 /**
  * Component representing a statistics table for a given usage report.
@@ -38,7 +41,7 @@ import { isEmpty } from '../../shared/empty.util';
   templateUrl: './statistics-table.component.html',
   styleUrls: ['./statistics-table.component.scss'],
   standalone: true,
-  imports: [NgIf, NgFor, AsyncPipe, TranslateModule],
+  imports: [NgIf, NgFor, AsyncPipe, TranslateModule, PaginationComponent],
 })
 export class StatisticsTableComponent implements OnInit {
 
@@ -47,6 +50,12 @@ export class StatisticsTableComponent implements OnInit {
    */
   @Input()
   report: UsageReport;
+
+  /**
+   * The number of points (e.g. datasets, countries, cities) to show per page.
+   */
+  @Input()
+  pageSize = 10;
 
   /**
    * Boolean indicating whether the usage report has data
@@ -58,9 +67,20 @@ export class StatisticsTableComponent implements OnInit {
    */
   headers: string[];
 
+  /**
+   * Configuration for the {@link PaginationComponent} (ds-pagination) used to page through the points.
+   */
+  paginationOptions: PaginationComponentOptions;
+
+  /**
+   * The points to render for the currently selected page.
+   */
+  paginatedPoints$: Observable<Point[]>;
+
   constructor(
     protected dsoService: DSpaceObjectDataService,
     protected nameService: DSONameService,
+    protected paginationService: PaginationService,
     private translateService: TranslateService,
   ) {
 
@@ -71,6 +91,23 @@ export class StatisticsTableComponent implements OnInit {
     if (this.hasData) {
       this.headers = Object.keys(this.report.points[0].values);
     }
+
+    this.paginationOptions = Object.assign(new PaginationComponentOptions(), {
+      // Unique per report AND scope so multiple tables paginate independently and a report doesn't pick up
+      // another scope's page from the URL. report.id is `<dso-uuid>_<reportType>`, e.g. `<uuid>_TotalVisits`.
+      id: `stats-${this.report.id}`,
+      // pageSize is the default; users can change it via the ds-pagination "results per page" selector.
+      pageSize: this.pageSize,
+      pageSizeOptions: [10, 20, 40, 60, 80, 100],
+      currentPage: 1,
+    });
+
+    this.paginatedPoints$ = this.paginationService.getCurrentPagination(this.paginationOptions.id, this.paginationOptions).pipe(
+      map((pagination) => {
+        const start = (pagination.currentPage - 1) * pagination.pageSize;
+        return this.report.points.slice(start, start + pagination.pageSize);
+      }),
+    );
   }
 
   /**
