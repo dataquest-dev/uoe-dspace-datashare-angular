@@ -114,10 +114,15 @@ export class BrowserKlaroService extends KlaroService {
       this.klaroConfig.translations.zy.consentNotice.description = 'cookies.consent.content-notice.description.no-privacy';
     }
 
-    const hideGoogleAnalytics$ = this.configService.findByPropertyName(this.GOOGLE_ANALYTICS_KEY).pipe(
-      getFirstCompletedRemoteData(),
-      map(remoteData => !remoteData.hasSucceeded || !remoteData.payload || isEmpty(remoteData.payload.values)),
-    );
+    // Only probe the backend for the Google Analytics key when GA is enabled for this
+    // installation. When it is disabled we hide the GA service from the consent UI without
+    // making a request that would otherwise 404 (the `google.analytics.key` property is unset).
+    const hideGoogleAnalytics$ = environment.info?.enableGoogleAnalytics
+      ? this.configService.findByPropertyName(this.GOOGLE_ANALYTICS_KEY).pipe(
+        getFirstCompletedRemoteData(),
+        map(remoteData => !remoteData.hasSucceeded || !remoteData.payload || isEmpty(remoteData.payload.values)),
+      )
+      : observableOf(true);
 
     const hideRegistrationVerification$ = this.configService.findByPropertyName(this.REGISTRATION_VERIFICATION_ENABLED_KEY).pipe(
       getFirstCompletedRemoteData(),

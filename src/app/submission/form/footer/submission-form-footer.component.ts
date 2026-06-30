@@ -92,8 +92,6 @@ export class SubmissionFormFooterComponent implements OnChanges {
               private restService: SubmissionRestService,
               private submissionService: SubmissionService,
               private datashareSubmissionService: DatashareSubmissionService) {
-    // Debug: Log the signal value changes
-    console.log('Footer component created, initial signal value:', this.hasUploadFileErrorsSignal());
   }
   // DATASHARE - End
 
@@ -110,10 +108,6 @@ export class SubmissionFormFooterComponent implements OnChanges {
       this.processingDepositStatus = this.submissionService.getSubmissionDepositProcessingStatus(this.submissionId);
       this.showDepositAndDiscard = observableOf(this.submissionService.getSubmissionScope() === SubmissionScopeType.WorkspaceItem);
       this.hasUnsavedModification = this.submissionService.hasUnsavedModification();
-      // DATASHARE - Start
-      // Debug: Log signal value on changes
-      console.log('Footer ngOnChanges, signal value:', this.hasUploadFileErrorsSignal());
-      // DATASHARE - End
     }
   }
 

@@ -133,7 +133,6 @@ export class SubmissionSectionContainerComponent implements OnInit {
    * @returns {string | null} The ID of the currently open panel, or null if no panel is open
    */
   get openPanelId() {
-    console.log('Open panel ID:', this.datashareSubmissionFormSectionContainerService.openPanelId());
     return this.datashareSubmissionFormSectionContainerService.openPanelId();
   }
 
@@ -155,7 +154,6 @@ export class SubmissionSectionContainerComponent implements OnInit {
    */
   isSectionOpen(): boolean {
     const openPanelId = this.datashareSubmissionFormSectionContainerService.openPanelId();
-    console.log('Checking if section is open:', this.sectionData.id === openPanelId);
     return this.sectionData.id === openPanelId;
   }
   // DATASHARE - end

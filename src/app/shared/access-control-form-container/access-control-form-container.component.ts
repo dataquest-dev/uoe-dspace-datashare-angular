@@ -98,11 +98,6 @@ export class AccessControlFormContainerComponent<T extends DSpaceObject> impleme
    * Will be used from a parent component to read the value of the form
    */
   getFormValue() {
-    console.log({
-      bitstream: this.bitstreamAccessCmp.getValue(),
-      item: this.itemAccessCmp.getValue(),
-      state: this.state,
-    });
     return {
       bitstream: this.bitstreamAccessCmp.getValue(),
       item: this.itemAccessCmp.getValue(),
@@ -137,9 +132,7 @@ export class AccessControlFormContainerComponent<T extends DSpaceObject> impleme
     this.bulkAccessControlService.executeScript(
       [ this.itemRD.payload.uuid ],
       file,
-    ).pipe(take(1)).subscribe((res) => {
-      console.log('success', res);
-    });
+    ).pipe(take(1)).subscribe();
   }
 
   /**
