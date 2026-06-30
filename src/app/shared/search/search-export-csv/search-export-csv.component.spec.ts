@@ -140,6 +140,27 @@ describe('SearchExportCsvComponent', () => {
       });
     });
   });
+  describe('bulkedit.export.max.items probe', () => {
+    beforeEach(waitForAsync(() => {
+      initBeforeEachAsync();
+    }));
+
+    it('should NOT probe bulkedit.export.max.items when the export button is not shown', () => {
+      // Non-admin: the button (and therefore the export-limit warning) is never rendered,
+      // so the config property must not be requested - this is what avoids the per-page 404.
+      (authorizationDataService.isAuthorized as jasmine.Spy).and.returnValue(observableOf(false));
+      (configurationDataService.findByPropertyName as jasmine.Spy).calls.reset();
+      initBeforeEach();
+      expect(configurationDataService.findByPropertyName).not.toHaveBeenCalledWith('bulkedit.export.max.items');
+    });
+
+    it('should probe bulkedit.export.max.items once the export button is shown', () => {
+      // Admin with the export script available: the warning is evaluated, so the limit is fetched.
+      (configurationDataService.findByPropertyName as jasmine.Spy).calls.reset();
+      initBeforeEach();
+      expect(configurationDataService.findByPropertyName).toHaveBeenCalledWith('bulkedit.export.max.items');
+    });
+  });
   describe('export', () => {
     beforeEach(waitForAsync(() => {
       initBeforeEachAsync();
