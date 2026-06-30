@@ -23,14 +23,12 @@ export class DatashareSubmissionService {
   constructor(private notificationsService: NotificationsService,
     private translate: TranslateService,
   ) {
-    console.log('DatashareSubmissionService created');
   }
 
   /**
    * Update the deposit button visibility state
    */
   updatehasUploadFilesErrors(show: boolean): void {
-    console.log('Updating hasUploadFilesErrors to:', show);
     this._hasUploadFilesErrorsSignal.set(show);
   }
 

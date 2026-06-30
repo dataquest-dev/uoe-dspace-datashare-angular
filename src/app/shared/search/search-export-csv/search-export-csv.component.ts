@@ -19,6 +19,7 @@ import { Observable } from 'rxjs';
 import {
   filter,
   map,
+  shareReplay,
   startWith,
   switchMap,
 } from 'rxjs/operators';
@@ -92,14 +93,32 @@ export class SearchExportCsvComponent implements OnInit, OnChanges {
       switchMap(() => this.scriptDataService.scriptWithNameExistsAndCanExecute('metadata-export-search')),
       map((canExecute: boolean) => canExecute),
       startWith(false),
+      shareReplay({ bufferSize: 1, refCount: true }),
     );
-    this.shouldShowWarning$ = this.itemExceeds();
+    this.shouldShowWarning$ = this.buildShouldShowWarning$();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes.total) {
-      this.shouldShowWarning$ = this.itemExceeds();
+    // ngOnChanges runs before ngOnInit, so shouldShowButton$ may not exist on the first
+    // change; in that case ngOnInit builds the warning observable with the current total.
+    if (changes.total && hasValue(this.shouldShowButton$)) {
+      this.shouldShowWarning$ = this.buildShouldShowWarning$();
     }
+  }
+
+  /**
+   * Build the observable that decides whether to show the export-limit warning.
+   * The backend `bulkedit.export.max.items` property is only requested once the export
+   * button is shown (i.e. the user is an administrator who can run the export script), so
+   * anonymous and non-admin users never trigger that request (which would otherwise 404
+   * when the property is unset).
+   */
+  private buildShouldShowWarning$(): Observable<boolean> {
+    return this.shouldShowButton$.pipe(
+      filter((canShow: boolean) => canShow),
+      switchMap(() => this.itemExceeds()),
+      startWith(false),
+    );
   }
 
   /**

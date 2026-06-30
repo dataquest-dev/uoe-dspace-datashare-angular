@@ -6,6 +6,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import { of as observableOf } from 'rxjs';
 import { TestScheduler } from 'rxjs/testing';
 
+import { environment } from '../../../environments/environment';
 import { AuthService } from '../../core/auth/auth.service';
 import { RestResponse } from '../../core/cache/response.models';
 import { ConfigurationDataService } from '../../core/data/configuration-data.service';
@@ -310,6 +311,9 @@ describe('BrowserKlaroService', () => {
     let GOOGLE_ANALYTICS_KEY;
     let REGISTRATION_VERIFICATION_ENABLED_KEY;
     beforeEach(() => {
+      // The Google Analytics key is only probed when GA is enabled for the installation;
+      // these tests exercise that probe-and-filter path.
+      environment.info.enableGoogleAnalytics = true;
       GOOGLE_ANALYTICS_KEY = clone((service as any).GOOGLE_ANALYTICS_KEY);
       REGISTRATION_VERIFICATION_ENABLED_KEY = clone((service as any).REGISTRATION_VERIFICATION_ENABLED_KEY);
       spyOn((service as any), 'getUser$').and.returnValue(observableOf(user));
@@ -318,6 +322,10 @@ describe('BrowserKlaroService', () => {
       spyOn((service as any), 'initializeUser');
       spyOn(service, 'translateConfiguration');
       configurationDataService.findByPropertyName = findByPropertyName;
+    });
+
+    afterEach(() => {
+      environment.info.enableGoogleAnalytics = false;
     });
 
     it('should not filter googleAnalytics when servicesToHide are empty', () => {
@@ -399,6 +407,20 @@ describe('BrowserKlaroService', () => {
             }),
           );
       service.initialize();
+      expect(service.klaroConfig.services).not.toContain(jasmine.objectContaining({ name: googleAnalytics }));
+    });
+    it('should hide googleAnalytics without requesting the key when GA is disabled', () => {
+      environment.info.enableGoogleAnalytics = false;
+      const findByPropertyNameSpy = jasmine.createSpy('findByPropertyName').and.returnValue(
+        createSuccessfulRemoteDataObject$({
+          ...new ConfigurationProperty(),
+          name: trackingIdTestValue,
+          values: ['false'],
+        }),
+      );
+      configurationDataService.findByPropertyName = findByPropertyNameSpy;
+      service.initialize();
+      expect(findByPropertyNameSpy).not.toHaveBeenCalledWith(GOOGLE_ANALYTICS_KEY);
       expect(service.klaroConfig.services).not.toContain(jasmine.objectContaining({ name: googleAnalytics }));
     });
   });

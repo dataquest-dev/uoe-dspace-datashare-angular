@@ -342,6 +342,7 @@ export const environment: BuildConfig = {
     enablePrivacyStatement: true,
     enableCOARNotifySupport: true,
     enableCookieConsentPopup: true,
+    enableGoogleAnalytics: false,
   },
   markdown: {
     enabled: false,

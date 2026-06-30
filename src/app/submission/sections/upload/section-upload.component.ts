@@ -268,10 +268,6 @@ export class SubmissionSectionUploadComponent extends SectionModelComponent {
 
         // IMPORTANT: Update the shared service signal
         const hasDuplicates = this.datashareSubmissionService.getDuplicateFileNames(this.fileNames).length > 0;
-        console.log('File names:', this.fileNames);
-        console.log('Has duplicates:', hasDuplicates);
-        console.log('Should show deposit button:', !hasDuplicates);
-        console.log('this.isTotalUploadedFilesSizeExceeded: ', this.isTotalUploadedFilesSizeExceeded);
 
         // Update the service signal
         this.datashareSubmissionService.updatehasUploadFilesErrors(!hasDuplicates || this.isTotalUploadedFilesSizeExceeded);

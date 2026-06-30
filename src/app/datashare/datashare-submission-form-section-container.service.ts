@@ -19,7 +19,6 @@ export class DatashareSubmissionFormSectionContainerService {
    * @param id The ID of the panel to open, or null to close all panels
    */
   setOpenPanelId(id: string | null): void {
-    console.log('Setting open panel ID to:', id);
     this.openPanelId.set(id);
   }
 }

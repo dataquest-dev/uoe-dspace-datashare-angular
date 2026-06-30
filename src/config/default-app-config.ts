@@ -483,6 +483,10 @@ export class DefaultAppConfig implements AppConfig {
     enablePrivacyStatement: true,
     enableCOARNotifySupport: true,
     enableCookieConsentPopup: true,
+    // Disabled by default: when no Google Analytics key is configured on the backend,
+    // probing for it only produces a 404 on every page. Enable this on installations
+    // that actually configure a Google Analytics tracking id.
+    enableGoogleAnalytics: false,
   };
 
   // Whether to enable Markdown (https://commonmark.org/) and MathJax (https://www.mathjax.org/)

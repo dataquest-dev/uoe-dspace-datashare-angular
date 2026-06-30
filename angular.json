@@ -40,7 +40,12 @@
             "aot": true,
             "assets": [
               "src/assets",
-              "src/robots.txt"
+              "src/robots.txt",
+              {
+                "glob": "favicon.ico",
+                "input": "src/themes/datashare/assets/images",
+                "output": "/"
+              }
             ],
             "styles": [
               "src/styles/startup.scss",

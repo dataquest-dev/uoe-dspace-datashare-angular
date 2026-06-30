@@ -9,6 +9,7 @@ import {
 } from 'angulartics2';
 import { combineLatest } from 'rxjs';
 
+import { environment } from '../../environments/environment';
 import { ConfigurationDataService } from '../core/data/configuration-data.service';
 import { getFirstCompletedRemoteData } from '../core/shared/operators';
 import { KlaroService } from '../shared/cookies/klaro.service';
@@ -38,6 +39,13 @@ export class GoogleAnalyticsService {
    * page and starts tracking.
    */
   addTrackingIdToPage(): void {
+    // Skip Google Analytics entirely when it is not enabled for this installation.
+    // This avoids a 404 request to the `google.analytics.key` configuration property
+    // (and any tracking setup) on installations that do not use Google Analytics.
+    if (!environment.info?.enableGoogleAnalytics) {
+      return;
+    }
+
     const googleKey$ = this.configService.findByPropertyName('google.analytics.key').pipe(
       getFirstCompletedRemoteData(),
     );

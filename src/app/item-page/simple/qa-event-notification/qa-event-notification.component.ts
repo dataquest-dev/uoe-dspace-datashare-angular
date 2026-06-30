@@ -12,14 +12,20 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
+import {
+  Observable,
+  of as observableOf,
+} from 'rxjs';
 import {
   catchError,
   map,
+  switchMap,
 } from 'rxjs/operators';
 
 import { getNotificatioQualityAssuranceRoute } from '../../../admin/admin-routing-paths';
 import { RequestParam } from '../../../core/cache/models/request-param.model';
+import { AuthorizationDataService } from '../../../core/data/feature-authorization/authorization-data.service';
+import { FeatureID } from '../../../core/data/feature-authorization/feature-id';
 import { FindListOptions } from '../../../core/data/find-list-options.model';
 import { PaginatedList } from '../../../core/data/paginated-list.model';
 import { RemoteData } from '../../../core/data/remote-data';
@@ -61,6 +67,7 @@ export class QaEventNotificationComponent implements OnChanges {
 
   constructor(
     private qualityAssuranceSourceDataService: QualityAssuranceSourceDataService,
+    private authorizationService: AuthorizationDataService,
   ) {}
 
   /**
@@ -77,20 +84,31 @@ export class QaEventNotificationComponent implements OnChanges {
    * Note: sourceId is composed as: id: "sourceName:<target>"
    */
   getQualityAssuranceSources$(): Observable<QualityAssuranceSourceObject[]> {
-    const findListTopicOptions: FindListOptions = {
-      searchParams: [new RequestParam('target', this.item.uuid)],
-    };
-    return this.qualityAssuranceSourceDataService.getSourcesByTarget(findListTopicOptions, false)
-      .pipe(
-        getFirstCompletedRemoteData(),
-        map((data: RemoteData<PaginatedList<QualityAssuranceSourceObject>>) => {
-          if (data.hasSucceeded) {
-            return data.payload.page;
-          }
-          return [];
-        }),
-        catchError(() => []),
-      );
+    // Quality Assurance sources are only available to authorized users. Checking the
+    // authorization first avoids issuing the `qualityassurancesources/search/byTarget`
+    // request for anonymous/unauthorized users, which would otherwise return a 401 that
+    // shows up as a failed request in the browser. Authorized users keep the same behavior.
+    return this.authorizationService.isAuthorized(FeatureID.CanSeeQA).pipe(
+      switchMap((canSeeQA: boolean) => {
+        if (!canSeeQA) {
+          return observableOf([] as QualityAssuranceSourceObject[]);
+        }
+        const findListTopicOptions: FindListOptions = {
+          searchParams: [new RequestParam('target', this.item.uuid)],
+        };
+        return this.qualityAssuranceSourceDataService.getSourcesByTarget(findListTopicOptions, false)
+          .pipe(
+            getFirstCompletedRemoteData(),
+            map((data: RemoteData<PaginatedList<QualityAssuranceSourceObject>>) => {
+              if (data.hasSucceeded) {
+                return data.payload.page;
+              }
+              return [];
+            }),
+          );
+      }),
+      catchError(() => observableOf([] as QualityAssuranceSourceObject[])),
+    );
   }
 
   /**

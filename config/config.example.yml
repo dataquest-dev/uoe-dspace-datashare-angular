@@ -465,6 +465,10 @@ info:
   enableEndUserAgreement: true
   enablePrivacyStatement: true
   enableCOARNotifySupport: true
+  # Only enable Google Analytics on installations that configure a `google.analytics.key`
+  # property on the backend. When false (default) the UI does not probe for that property,
+  # avoiding a 404 request on every page.
+  enableGoogleAnalytics: false
 
 # Whether to enable Markdown (https://commonmark.org/) and MathJax (https://www.mathjax.org/)
 # display in supported metadata fields. By default, only dc.description.abstract is supported.

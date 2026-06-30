@@ -4,6 +4,7 @@ import {
 } from 'angulartics2';
 import { of } from 'rxjs';
 
+import { environment } from '../../environments/environment';
 import { ConfigurationDataService } from '../core/data/configuration-data.service';
 import { ConfigurationProperty } from '../core/shared/configuration-property.model';
 import { KlaroService } from '../shared/cookies/klaro.service';
@@ -40,6 +41,10 @@ describe('GoogleAnalyticsService', () => {
   });
 
   beforeEach(() => {
+    // These tests exercise the active Google Analytics tracking path, which is only
+    // reached when GA is enabled for the installation.
+    environment.info.enableGoogleAnalytics = true;
+
     googleAnalyticsSpy = jasmine.createSpyObj('Angulartics2GoogleAnalytics', [
       'startTracking',
     ]);
@@ -80,11 +85,33 @@ describe('GoogleAnalyticsService', () => {
     service = new GoogleAnalyticsService(googleAnalyticsSpy, googleTagManagerSpy, klaroServiceSpy, configSpy, documentSpy );
   });
 
+  afterEach(() => {
+    environment.info.enableGoogleAnalytics = false;
+  });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
 
   describe('addTrackingIdToPage()', () => {
+    describe('when Google Analytics is disabled by config', () => {
+      beforeEach(() => {
+        environment.info.enableGoogleAnalytics = false;
+      });
+
+      it(`should NOT request the ${trackingIdProp} property`, () => {
+        service.addTrackingIdToPage();
+        expect(configSpy.findByPropertyName).not.toHaveBeenCalled();
+      });
+
+      it('should NOT add a script or start tracking', () => {
+        service.addTrackingIdToPage();
+        expect(bodyElementSpy.appendChild).toHaveBeenCalledTimes(0);
+        expect(googleAnalyticsSpy.startTracking).toHaveBeenCalledTimes(0);
+        expect(googleTagManagerSpy.startTracking).toHaveBeenCalledTimes(0);
+      });
+    });
+
     it(`should request the ${trackingIdProp} property`, () => {
       service.addTrackingIdToPage();
       expect(configSpy.findByPropertyName).toHaveBeenCalledTimes(1);
