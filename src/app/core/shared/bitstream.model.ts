@@ -33,6 +33,15 @@ export class Bitstream extends DSpaceObject implements ChildHALResource {
   sizeBytes: number;
 
   /**
+   * The checksum of this Bitstream, including the algorithm used to calculate it
+   */
+  @autoserialize
+  checkSum: {
+    checkSumAlgorithm: string;
+    value: string;
+  };
+
+  /**
    * The description of this Bitstream
    */
   @autoserialize
