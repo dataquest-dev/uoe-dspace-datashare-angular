@@ -4646,6 +4646,7 @@
 
   // "item.page.filesection.format": "Format:",
   // TODO New key - Add a translation
+  "item.page.filesection.checksum": "File checksum:",
   "item.page.filesection.format": "Format:",
 
   // "item.page.filesection.name": "Name:",
