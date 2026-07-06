@@ -25,7 +25,7 @@
 
                           <ng-container *ngIf="file.checkSum">
                             <dt class="col-md-4">{{"item.page.filesection.checksum" | translate}}</dt>
-                            <dd class="col-md-8">{{ file.checkSum.value }}</dd>
+                            <dd class="col-md-8">({{ file.checkSum.checkSumAlgorithm }}):{{ file.checkSum.value }}</dd>
                           </ng-container>
 
                           <ng-container *ngIf="file.hasMetadata('dc.description')">
@@ -68,7 +68,7 @@
 
                           <ng-container *ngIf="file.checkSum">
                             <dt class="col-md-4">{{"item.page.filesection.checksum" | translate}}</dt>
-                            <dd class="col-md-8">{{ file.checkSum.value }}</dd>
+                            <dd class="col-md-8">({{ file.checkSum.checkSumAlgorithm }}):{{ file.checkSum.value }}</dd>
                           </ng-container>
 
 
