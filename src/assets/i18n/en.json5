@@ -2806,6 +2806,8 @@
 
   "item.page.files": "Files",
 
+  "item.page.filesection.checksum": "Checksum:",
+
   "item.page.filesection.description": "Description:",
 
   "item.page.filesection.download": "Download",

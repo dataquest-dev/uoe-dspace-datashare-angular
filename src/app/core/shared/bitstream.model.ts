@@ -21,6 +21,11 @@ import { ChildHALResource } from './child-hal-resource.model';
 import { DSpaceObject } from './dspace-object.model';
 import { HALLink } from './hal-link.model';
 
+export interface ChecksumInfo {
+  checkSumAlgorithm: string;
+  value: string;
+}
+
 @typedObject
 @inheritSerialization(DSpaceObject)
 export class Bitstream extends DSpaceObject implements ChildHALResource {
@@ -37,6 +42,12 @@ export class Bitstream extends DSpaceObject implements ChildHALResource {
    */
   @autoserialize
   description: string;
+
+  /**
+   * The checksum information of this Bitstream
+   */
+  @autoserialize
+  checkSum: ChecksumInfo;
 
   /**
    * The name of the Bundle this Bitstream is part of

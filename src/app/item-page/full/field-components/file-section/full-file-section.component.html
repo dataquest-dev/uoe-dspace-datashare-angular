@@ -23,8 +23,10 @@
                             <dd class="col-md-8">{{(file.sizeBytes) | dsFileSize }}</dd>
 
 
-                            <dt class="col-md-4">{{"item.page.filesection.format" | translate}}</dt>
-                            <dd class="col-md-8">{{(file.format | async)?.payload?.description}}</dd>
+                          <ng-container *ngIf="file.checkSum">
+                            <dt class="col-md-4">{{"item.page.filesection.checksum" | translate}}</dt>
+                            <dd class="col-md-8">({{ file.checkSum.checkSumAlgorithm }}):{{ file.checkSum.value }}</dd>
+                          </ng-container>
 
                           <ng-container *ngIf="file.hasMetadata('dc.description')">
                             <dt class="col-md-4">{{"item.page.filesection.description" | translate}}</dt>
@@ -64,8 +66,10 @@
                             <dt class="col-md-4">{{"item.page.filesection.size" | translate}}</dt>
                             <dd class="col-md-8">{{(file.sizeBytes) | dsFileSize }}</dd>
 
-                            <dt class="col-md-4">{{"item.page.filesection.format" | translate}}</dt>
-                            <dd class="col-md-8">{{(file.format | async)?.payload?.description}}</dd>
+                          <ng-container *ngIf="file.checkSum">
+                            <dt class="col-md-4">{{"item.page.filesection.checksum" | translate}}</dt>
+                            <dd class="col-md-8">({{ file.checkSum.checkSumAlgorithm }}):{{ file.checkSum.value }}</dd>
+                          </ng-container>
 
 
                             <dt class="col-md-4">{{"item.page.filesection.description" | translate}}</dt>
