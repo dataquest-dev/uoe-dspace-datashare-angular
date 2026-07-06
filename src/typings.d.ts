@@ -86,3 +86,13 @@ declare module '*.scss' {
   const content: any;
   export default content;
 }
+
+/**
+ * Window global injected by the inline hydration-safe anti-flicker bootstrap script in
+ * `src/index.html`. Called once by `AppComponent.removeSsrOverlayWhenContentVisible()` after the
+ * auth/theme loader gate opens and the routed `<ds-app>` DOM has settled, to drop the SSR
+ * freeze-frame overlay.
+ */
+interface Window {
+  __dspaceRemoveSsrOverlay?: (() => void) | null;
+}
