@@ -70,7 +70,17 @@
     // CLONE (deep), never move: the originals stay exactly where Angular expects to hydrate them.
     // The clone keeps every _nghost/_ngcontent attribute, so the global component styles in <head>
     // still apply and the frozen frame looks identical to the SSR paint.
-    overlay.appendChild(app.cloneNode(true));
+    var clone = app.cloneNode(true);
+    // Strip ids from the clone. It is a purely visual freeze-frame (inert + aria-hidden) that needs
+    // no ids, and removing them avoids duplicate-id collisions: while the live themed subtree briefly
+    // detaches a node during re-render, document.getElementById('main-content') & co. would otherwise
+    // resolve to the clone's copy instead of the live app.
+    clone.removeAttribute('id');
+    var clonedWithId = clone.querySelectorAll('[id]');
+    for (var i = 0; i < clonedWithId.length; i++) {
+      clonedWithId[i].removeAttribute('id');
+    }
+    overlay.appendChild(clone);
     document.body.appendChild(overlay);
 
     var removing = false;
