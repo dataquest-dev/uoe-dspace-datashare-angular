@@ -175,10 +175,12 @@ describe('App component', () => {
       mockStore.setState({ core: { auth: { loading: false, blocking: true } } });
 
       // A settled <ds-app> with real content present, so the DOM-settle watcher can resolve.
+      // Insert it FIRST in the document so production's `document.querySelector('ds-app')` always
+      // resolves to this controlled element, even if a TestBed fixture host <ds-app> is ever attached.
       dsAppEl = document.createElement('ds-app');
       dsAppEl.setAttribute('style', 'display:block;height:800px');
       dsAppEl.innerHTML = '<main id="main-content" style="display:block;height:800px">home content</main>';
-      document.body.appendChild(dsAppEl);
+      document.body.insertBefore(dsAppEl, document.body.firstChild);
 
       // Force rAF to a synchronous shim so assertions are deterministic.
       originalRaF = window.requestAnimationFrame;
