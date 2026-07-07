@@ -21,7 +21,11 @@
       z-index: 10000;
       background: #fff;
       overflow: hidden;
-      pointer-events: none;
+      /* Intercept pointer events so clicks/scrolls can't reach the still-hydrating live app
+         underneath and hit a stale target while the user only sees the frozen clone. Safe because
+         the overlay is inert + aria-hidden. The removal script flips this to `none` for the fade-out
+         so the just-revealed app is interactive during those last ~200ms. */
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -78,6 +82,8 @@
 
       var el = document.getElementById('__dspace_ssr_overlay');
       if (!el) return;
+      // Content is revealed and settled: let clicks/scrolls reach the live app during the fade-out.
+      el.style.pointerEvents = 'none';
       el.style.transition = 'opacity 150ms ease-out';
       el.style.opacity = '0';
       setTimeout(function () {
