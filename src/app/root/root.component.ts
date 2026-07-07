@@ -49,6 +49,9 @@ import { NotificationsBoardComponent } from '../shared/notifications/notificatio
 import { CSSVariableService } from '../shared/sass-helper/css-variable.service';
 import { SystemWideAlertBannerComponent } from '../system-wide-alert/alert-banner/system-wide-alert-banner.component';
 
+/** Admin-sidebar left-gutter state; maps to the `ds-admin-sidebar-*` classes in root.component.scss. */
+type SidebarPaddingState = 'hidden' | 'unpinned' | 'pinned';
+
 @Component({
   selector: 'ds-base-root',
   templateUrl: './root.component.html',
@@ -84,7 +87,15 @@ export class RootComponent implements OnInit, AfterViewInit {
    * is rendered identically on the server (the anti-flicker SSR snapshot) and the browser (the live
    * app) — no browser-only CSS-variable read, no hardcoded px, and it stays theme- and viewport-aware.
    */
-  sidebarPaddingState$: Observable<string>;
+  sidebarPaddingState$: Observable<SidebarPaddingState>;
+
+  /**
+   * `outer-wrapper` classes as a single stream so the template subscribes once (one `[ngClass]`)
+   * instead of evaluating `sidebarPaddingState$ | async` per gutter class. Merges the browser/OS
+   * classes with the current `ds-admin-sidebar-*` gutter class; seeded with the `'hidden'` gutter so
+   * the OS classes never wait on the sidebar stream's first emit.
+   */
+  outerWrapperNgClass$: Observable<string[]>;
 
   /**
    * Enables the gutter's `transition: padding-left` only AFTER the first browser paint. The initial
@@ -155,7 +166,14 @@ export class RootComponent implements OnInit, AfterViewInit {
     // The CSS class resolves the gutter from `--ds-admin-sidebar-*` (see root.component.scss), identically
     // on server and browser — fixing the jump without any hardcoded width.
     this.sidebarPaddingState$ = combineLatestObservable([this.isSidebarVisible$, this.slideSidebarOver$]).pipe(
-      map(([visible, over]) => !visible ? 'hidden' : over ? 'unpinned' : 'pinned'),
+      map(([visible, over]): SidebarPaddingState => !visible ? 'hidden' : over ? 'unpinned' : 'pinned'),
+    );
+
+    this.outerWrapperNgClass$ = combineLatestObservable([
+      this.browserOsClasses,
+      this.sidebarPaddingState$.pipe(startWith('hidden' as SidebarPaddingState)),
+    ]).pipe(
+      map(([osClasses, state]) => [...osClasses, `ds-admin-sidebar-${state}`]),
     );
 
     if (this.router.url === getPageInternalServerErrorRoute()) {

@@ -3,11 +3,8 @@
 </button>
 
 <div class="outer-wrapper" [class.d-none]="shouldShowFullscreenLoader"
-     [ngClass]="browserOsClasses.asObservable() | async"
-     [class.ds-admin-sidebar-animate]="gutterTransitionEnabled"
-     [class.ds-admin-sidebar-hidden]="(sidebarPaddingState$ | async) === 'hidden'"
-     [class.ds-admin-sidebar-unpinned]="(sidebarPaddingState$ | async) === 'unpinned'"
-     [class.ds-admin-sidebar-pinned]="(sidebarPaddingState$ | async) === 'pinned'">
+     [ngClass]="outerWrapperNgClass$ | async"
+     [class.ds-admin-sidebar-animate]="gutterTransitionEnabled">
   <ds-admin-sidebar [expandedSidebarWidth$]="expandedSidebarWidth$" [collapsedSidebarWidth$]="collapsedSidebarWidth$"></ds-admin-sidebar>
   <div class="inner-wrapper">
     <ds-system-wide-alert-banner></ds-system-wide-alert-banner>
