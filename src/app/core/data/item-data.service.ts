@@ -280,8 +280,14 @@ export abstract class BaseItemDataService extends IdentifiableDataService<Item> 
   public getMoveItemEndpoint(itemId: string, inheritPolicies: boolean, keepEmbargoPolicies = true): Observable<string> {
     return this.halService.getEndpoint(this.linkPath).pipe(
       map((endpoint: string) => this.getIDHref(endpoint, itemId)),
-      map((endpoint: string) =>
-        `${endpoint}/owningCollection?inheritPolicies=${inheritPolicies}&keepEmbargoPolicies=${keepEmbargoPolicies}`),
+      map((endpoint: string) => {
+        let href = `${endpoint}/owningCollection?inheritPolicies=${inheritPolicies}`;
+        // keepEmbargoPolicies only affects the move when policies are inherited, so only send it then.
+        if (inheritPolicies) {
+          href += `&keepEmbargoPolicies=${keepEmbargoPolicies}`;
+        }
+        return href;
+      }),
     );
   }
 
