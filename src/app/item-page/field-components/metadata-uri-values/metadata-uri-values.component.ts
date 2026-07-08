@@ -55,9 +55,15 @@ export class MetadataUriValuesComponent extends MetadataValuesComponent {
   @Input() label: string;
 
   // DATASHARE - start
-  // get makes it accessible from the template as a property.
-  get hasDoiLink(): boolean {
-    return this.mdValues?.some(v => typeof v.value === 'string' && v.value.startsWith('https://doi.org'));
-  }
+  /**
+   * When true, this component renders a DOI ("Persistent Identifier") field:
+   *  - only DOI values (https://doi.org/...) are rendered as links (the handle is hidden);
+   *  - the field label/wrapper is always shown, even while a DOI is still queued for
+   *    registration by the scheduled task (i.e. no https://doi.org value is present yet),
+   *    so users can see that a DOI exists / is pending.
+   * When false (the default) the upstream generic behaviour is kept: every URI value is
+   * rendered as a link and the field is hidden when it has no value.
+   */
+  @Input() doiField = false;
   // DATASHARE - end
 }

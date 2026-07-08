@@ -98,6 +98,91 @@ describe('MetadataUriValuesComponent', () => {
 
   });
 
+  // DATASHARE - start
+  // The DOI / "Persistent Identifier" field on the simple item view is rendered through this
+  // component. When a record is created its DOI is only registered asynchronously by a scheduled
+  // task, so for a while the item has no https://doi.org value yet. The field must still be shown
+  // (with an empty value) so users can see that a DOI exists / is pending, matching the behaviour
+  // of the previous DataShare release.
+  describe('when used as a DOI field (doiField = true)', () => {
+
+    describe('and a registered DOI is present', () => {
+      beforeEach(() => {
+        comp.doiField = true;
+        comp.mdValues = [
+          { language: 'en_US', value: 'https://hdl.handle.net/123456789/99' },
+          { language: 'en_US', value: 'https://doi.org/10.1234/registered' },
+        ] as MetadataValue[];
+        fixture.detectChanges();
+      });
+
+      it('should render the field wrapper and show the label', () => {
+        const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
+        expect(wrapper).not.toBeNull();
+        expect(wrapper.nativeElement.classList).not.toContain('d-none');
+      });
+
+      it('should render only the DOI value as a link (not the handle)', () => {
+        const links = fixture.debugElement.queryAll(By.css('a'));
+        expect(links.length).toBe(1);
+        expect(links[0].nativeElement.getAttribute('href')).toBe('https://doi.org/10.1234/registered');
+      });
+    });
+
+    describe('and the DOI has not been registered yet (scheduled task pending)', () => {
+      beforeEach(() => {
+        comp.doiField = true;
+        // Only a handle is present, the DOI is still queued for registration by the CRON job
+        comp.mdValues = [
+          { language: 'en_US', value: 'https://hdl.handle.net/123456789/99' },
+        ] as MetadataValue[];
+        fixture.detectChanges();
+      });
+
+      it('should still display the DOI field (label visible) even without a DOI link', () => {
+        const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
+        expect(wrapper).not.toBeNull();
+        expect(wrapper.nativeElement.classList).not.toContain('d-none');
+        expect(fixture.debugElement.query(By.css('.simple-view-element-header'))).not.toBeNull();
+      });
+
+      it('should not render the non-DOI (handle) value as a link', () => {
+        expect(fixture.debugElement.queryAll(By.css('a')).length).toBe(0);
+      });
+    });
+
+    describe('and the item has no identifier metadata at all', () => {
+      beforeEach(() => {
+        comp.doiField = true;
+        comp.mdValues = [] as MetadataValue[];
+        fixture.detectChanges();
+      });
+
+      it('should still display the (empty) DOI field wrapper', () => {
+        const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
+        expect(wrapper).not.toBeNull();
+        expect(wrapper.nativeElement.classList).not.toContain('d-none');
+      });
+    });
+  });
+
+  describe('when NOT used as a DOI field (doiField = false, the default)', () => {
+    beforeEach(() => {
+      comp.doiField = false;
+      comp.mdValues = [
+        { language: 'en_US', value: 'https://example.com/endorsement' },
+      ] as MetadataValue[];
+      fixture.detectChanges();
+    });
+
+    it('should render every URI value as a link (upstream behaviour)', () => {
+      const links = fixture.debugElement.queryAll(By.css('a'));
+      expect(links.length).toBe(1);
+      expect(links[0].nativeElement.getAttribute('href')).toBe('https://example.com/endorsement');
+    });
+  });
+  // DATASHARE - end
+
 });
 
 function containsHref(links: DebugElement[], href: string): boolean {
