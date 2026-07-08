@@ -215,7 +215,7 @@ export class DsDynamicListComponent extends DynamicFormControlComponent implemen
 
     this.subs.push(
       this.vocabularyService.getVocabularyEntries(this.model.vocabularyOptions, this.nextPageInfo).pipe(
-        timeout({ each: 30000 }),
+        timeout({ each: 15000 }),
         getFirstCompletedRemoteData(),
         map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
         catchError(() => observableOf(buildPaginatedList(new PageInfo(), []))),

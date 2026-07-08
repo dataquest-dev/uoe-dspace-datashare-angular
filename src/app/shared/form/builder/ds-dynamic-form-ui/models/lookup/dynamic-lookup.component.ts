@@ -279,15 +279,18 @@ export class DsDynamicLookupComponent extends DsDynamicVocabularyComponent imple
       this.model.vocabularyOptions,
       this.pageInfo,
     ).pipe(
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       getFirstCompletedRemoteData(),
-      map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
-      catchError(() =>
-        observableOf(buildPaginatedList(
-          new PageInfo(),
-          [],
-        )),
-      ),
+      map((rd) => {
+        if (!rd.hasSucceeded) {
+          this.notifyVocabularyLoadError();
+        }
+        return (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), []);
+      }),
+      catchError(() => {
+        this.notifyVocabularyLoadError();
+        return observableOf(buildPaginatedList(new PageInfo(), []));
+      }),
       distinctUntilChanged(),
       finalize(() => this.loading = false))
       .subscribe((list: PaginatedList<VocabularyEntry>) => {

@@ -199,7 +199,7 @@ export class SubmissionFormCollectionComponent implements OnDestroy, OnChanges, 
       mergeMap((submissionObject: SubmissionObject[]) => {
         // retrieve the full submission object with embeds
         return this.submissionService.retrieveSubmission(submissionObject[0].id).pipe(
-          timeout({ each: 30000 }),
+          timeout({ each: 15000 }),
           getFirstCompletedRemoteData(),
           map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : null),
         );

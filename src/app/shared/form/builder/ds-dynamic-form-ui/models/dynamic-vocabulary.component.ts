@@ -1,6 +1,7 @@
 import {
   Component,
   EventEmitter,
+  inject,
   Input,
   Output,
 } from '@angular/core';
@@ -10,6 +11,7 @@ import {
   DynamicFormLayoutService,
   DynamicFormValidationService,
 } from '@ng-dynamic-forms/core';
+import { TranslateService } from '@ngx-translate/core';
 import {
   Observable,
   of as observableOf,
@@ -20,6 +22,7 @@ import { PageInfo } from '../../../../../core/shared/page-info.model';
 import { VocabularyEntry } from '../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
 import { VocabularyService } from '../../../../../core/submission/vocabularies/vocabulary.service';
 import { isNotEmpty } from '../../../../empty.util';
+import { NotificationsService } from '../../../../notifications/notifications.service';
 import { FormFieldMetadataValueObject } from '../../models/form-field-metadata-value.model';
 import { DsDynamicInputModel } from './ds-dynamic-input.model';
 
@@ -41,11 +44,23 @@ export abstract class DsDynamicVocabularyComponent extends DynamicFormControlCom
 
   public abstract pageInfo: PageInfo;
 
+  protected notificationsService = inject(NotificationsService);
+  protected translateService = inject(TranslateService);
+
   protected constructor(protected vocabularyService: VocabularyService,
                         protected layoutService: DynamicFormLayoutService,
                         protected validationService: DynamicFormValidationService,
   ) {
     super(layoutService, validationService);
+  }
+
+  /**
+   * Show a user-friendly error notification when a controlled-vocabulary / authority
+   * lookup fails or times out, so the user knows to retry instead of staring at a
+   * spinner (or a silently empty list).
+   */
+  protected notifyVocabularyLoadError(): void {
+    this.notificationsService.error(this.translateService.instant('form.vocabulary.load-error'));
   }
 
   /**

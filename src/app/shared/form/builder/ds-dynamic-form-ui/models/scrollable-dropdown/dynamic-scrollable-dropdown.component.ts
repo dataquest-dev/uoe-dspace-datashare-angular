@@ -162,10 +162,18 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
   loadOptions(fromInit: boolean) {
     this.loading = true;
     this.getDataFromService().pipe(
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       getFirstCompletedRemoteData(),
-      map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
-      catchError(() => observableOf(buildPaginatedList(new PageInfo(), []))),
+      map((rd) => {
+        if (!rd.hasSucceeded) {
+          this.notifyVocabularyLoadError();
+        }
+        return (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), []);
+      }),
+      catchError(() => {
+        this.notifyVocabularyLoadError();
+        return observableOf(buildPaginatedList(new PageInfo(), []));
+      }),
       finalize(() => this.loading = false),
     ).subscribe((list: PaginatedList<CacheableObject>) => {
       this.optionsList = list.page;
@@ -291,14 +299,18 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
         this.pageInfo.totalPages,
       );
       this.getDataFromService().pipe(
-        timeout({ each: 30000 }),
+        timeout({ each: 15000 }),
         getFirstCompletedRemoteData(),
-        map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
-        catchError(() => observableOf(buildPaginatedList(
-          new PageInfo(),
-          [],
-        )),
-        ),
+        map((rd) => {
+          if (!rd.hasSucceeded) {
+            this.notifyVocabularyLoadError();
+          }
+          return (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), []);
+        }),
+        catchError(() => {
+          this.notifyVocabularyLoadError();
+          return observableOf(buildPaginatedList(new PageInfo(), []));
+        }),
         finalize(() => this.loading = false))
         .subscribe((list: PaginatedList<any>) => {
           this.optionsList = this.optionsList.concat(list.page);

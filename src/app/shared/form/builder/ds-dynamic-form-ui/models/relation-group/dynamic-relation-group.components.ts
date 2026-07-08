@@ -286,7 +286,7 @@ export class DsDynamicRelationGroupComponent extends DynamicFormControlComponent
                   valueObj[fieldName].authority,
                   (model as any).vocabularyOptions.name,
                 ).pipe(
-                  timeout({ each: 30000 }),
+                  timeout({ each: 15000 }),
                   getFirstCompletedRemoteData(),
                   map((entryDetailRD) => (entryDetailRD.hasSucceeded && hasValue(entryDetailRD.payload)) ? Object.assign(
                     new FormFieldMetadataValueObject(),

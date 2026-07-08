@@ -216,7 +216,7 @@ export class VocabularyTreeviewService {
     this.dataChange.next([]);
 
     this.vocabularyService.getVocabularyEntriesByValue(query, false, this.vocabularyOptions, new PageInfo()).pipe(
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       getFirstCompletedRemoteData(),
       map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload.page : []),
       mergeMap((result: VocabularyEntry[]) => (result.length > 0) ? result : observableOf(null)),
@@ -329,7 +329,7 @@ export class VocabularyTreeviewService {
    */
   private getById(entryId: string): Observable<VocabularyEntryDetail> {
     return this.vocabularyService.findEntryDetailById(entryId, this.vocabularyName).pipe(
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       getFirstCompletedRemoteData(),
       map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : null),
       catchError(() => observableOf(null)),
@@ -344,7 +344,7 @@ export class VocabularyTreeviewService {
    */
   private retrieveTopNodes(pageInfo: PageInfo, nodes: TreeviewNode[], selectedItems: string[]): void {
     this.vocabularyService.searchTopEntries(this.vocabularyName, pageInfo).pipe(
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       getFirstCompletedRemoteData(),
       map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
       catchError(() => observableOf(buildPaginatedList(new PageInfo(), []))),

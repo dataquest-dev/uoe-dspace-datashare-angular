@@ -222,7 +222,7 @@ export class SubmissionSectionFormComponent extends SectionModelComponent {
           this.sectionService.isSectionReadOnly(this.submissionId, this.sectionData.id, this.submissionService.getSubmissionScope()),
         ])),
       take(1),
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       catchError(() => EMPTY),
       finalize(() => this.isLoading = false))
       .subscribe(([sectionData, submissionObject, isSectionReadOnly]: [WorkspaceitemSectionFormObject, SubmissionObject, boolean]) => {

@@ -261,7 +261,7 @@ export class CollectionDropdownComponent implements OnInit, OnDestroy {
         .getAuthorizedCollection(query, findOptions, true, true, this.searchHref, followLink('parentCommunity'));
     }
     this.searchListCollection$ = searchListService$.pipe(
-      timeout({ each: 30000 }),
+      timeout({ each: 15000 }),
       getFirstCompletedRemoteData(),
       switchMap((collectionsRD: RemoteData<PaginatedList<Collection>>) => {
         this.searchComplete.emit();
@@ -272,7 +272,7 @@ export class CollectionDropdownComponent implements OnInit, OnDestroy {
           this.emitSelectionEvents(collectionsRD);
           return observableFrom(collectionsRD.payload.page).pipe(
             mergeMap((collection: Collection) => collection.parentCommunity.pipe(
-              timeout({ each: 30000 }),
+              timeout({ each: 15000 }),
               getFirstCompletedRemoteData(),
               map((communityRD: RemoteData<Community>) => (communityRD.hasSucceeded && hasValue(communityRD.payload)) ? communityRD.payload : new Community()),
               catchError(() => observableOf(new Community())),

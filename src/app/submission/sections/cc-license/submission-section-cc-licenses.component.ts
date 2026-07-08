@@ -407,7 +407,7 @@ export class SubmissionSectionCcLicensesComponent extends SectionModelComponent 
 
     this.subscriptions.push(
       this.submissionCcLicensesDataService.findAll(this.ccLicenceOptions).pipe(
-        timeout({ each: 30000 }),
+        timeout({ each: 15000 }),
         getFirstCompletedRemoteData(),
         map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
         tap((response) => this._isLastPage = response.pageInfo.currentPage === response.pageInfo.totalPages),

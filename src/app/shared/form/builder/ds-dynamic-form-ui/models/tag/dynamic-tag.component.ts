@@ -118,7 +118,7 @@ export class DsDynamicTagComponent extends DsDynamicVocabularyComponent implemen
           return observableOf({ list: [] });
         } else {
           return this.vocabularyService.getVocabularyEntriesByValue(term, false, this.model.vocabularyOptions, new PageInfo()).pipe(
-            timeout({ each: 30000 }),
+            timeout({ each: 15000 }),
             getFirstCompletedRemoteData(),
             map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
             tap(() => this.searchFailed = false),
