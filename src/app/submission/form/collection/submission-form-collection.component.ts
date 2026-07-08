@@ -20,9 +20,12 @@ import {
   Subscription,
 } from 'rxjs';
 import {
+  catchError,
+  finalize,
   find,
   map,
   mergeMap,
+  timeout,
 } from 'rxjs/operators';
 
 import { DSONameService } from '../../../core/breadcrumbs/dso-name.service';
@@ -31,7 +34,7 @@ import { RemoteData } from '../../../core/data/remote-data';
 import { JsonPatchOperationPathCombiner } from '../../../core/json-patch/builder/json-patch-operation-path-combiner';
 import { JsonPatchOperationsBuilder } from '../../../core/json-patch/builder/json-patch-operations-builder';
 import { Collection } from '../../../core/shared/collection.model';
-import { getFirstSucceededRemoteDataPayload } from '../../../core/shared/operators';
+import { getFirstCompletedRemoteData } from '../../../core/shared/operators';
 import { SubmissionObject } from '../../../core/submission/models/submission-object.model';
 import { SubmissionJsonPatchOperationsService } from '../../../core/submission/submission-json-patch-operations.service';
 import { BtnDisabledDirective } from '../../../shared/btn-disabled.directive';
@@ -196,16 +199,21 @@ export class SubmissionFormCollectionComponent implements OnDestroy, OnChanges, 
       mergeMap((submissionObject: SubmissionObject[]) => {
         // retrieve the full submission object with embeds
         return this.submissionService.retrieveSubmission(submissionObject[0].id).pipe(
-          getFirstSucceededRemoteDataPayload(),
+          timeout({ each: 30000 }),
+          getFirstCompletedRemoteData(),
+          map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : null),
         );
       }),
+      catchError(() => observableOf(null)),
+      finalize(() => this.processingChange$.next(false)),
     ).subscribe((submissionObject: SubmissionObject) => {
-      this.selectedCollectionId = event.collection.id;
-      this.selectedCollectionName$ = observableOf(event.collection.name);
-      this.collectionChange.emit(submissionObject);
-      this.submissionService.changeSubmissionCollection(this.submissionId, event.collection.id);
-      this.processingChange$.next(false);
-      this.cdr.detectChanges();
+      if (hasValue(submissionObject)) {
+        this.selectedCollectionId = event.collection.id;
+        this.selectedCollectionName$ = observableOf(event.collection.name);
+        this.collectionChange.emit(submissionObject);
+        this.submissionService.changeSubmissionCollection(this.submissionId, event.collection.id);
+        this.cdr.detectChanges();
+      }
     }),
     );
   }

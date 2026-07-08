@@ -29,14 +29,17 @@ import {
   Subscription,
 } from 'rxjs';
 import {
+  catchError,
   debounceTime,
   distinctUntilChanged,
+  finalize,
   map,
   mergeMap,
   reduce,
   startWith,
   switchMap,
   take,
+  timeout,
 } from 'rxjs/operators';
 
 import { DSONameService } from '../../core/breadcrumbs/dso-name.service';
@@ -258,6 +261,7 @@ export class CollectionDropdownComponent implements OnInit, OnDestroy {
         .getAuthorizedCollection(query, findOptions, true, true, this.searchHref, followLink('parentCommunity'));
     }
     this.searchListCollection$ = searchListService$.pipe(
+      timeout({ each: 30000 }),
       getFirstCompletedRemoteData(),
       switchMap((collectionsRD: RemoteData<PaginatedList<Collection>>) => {
         this.searchComplete.emit();
@@ -268,7 +272,10 @@ export class CollectionDropdownComponent implements OnInit, OnDestroy {
           this.emitSelectionEvents(collectionsRD);
           return observableFrom(collectionsRD.payload.page).pipe(
             mergeMap((collection: Collection) => collection.parentCommunity.pipe(
-              getFirstSucceededRemoteDataPayload(),
+              timeout({ each: 30000 }),
+              getFirstCompletedRemoteData(),
+              map((communityRD: RemoteData<Community>) => (communityRD.hasSucceeded && hasValue(communityRD.payload)) ? communityRD.payload : new Community()),
+              catchError(() => observableOf(new Community())),
               map((community: Community) => ({
                 communities: [{ id: community.id, name: this.dsoNameService.getName(community) }],
                 collection: { id: collection.id, uuid: collection.id, name: this.dsoNameService.getName(collection) },
@@ -281,6 +288,8 @@ export class CollectionDropdownComponent implements OnInit, OnDestroy {
           return observableOf([]);
         }
       }),
+      catchError(() => observableOf([])),
+      finalize(() => this.hideShowLoader(false)),
     );
     this.subs.push(
       this.searchListCollection$.subscribe((list: CollectionListEntry[]) => {

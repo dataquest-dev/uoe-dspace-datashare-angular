@@ -34,6 +34,7 @@ import {
   merge,
   switchMap,
   tap,
+  timeout,
 } from 'rxjs/operators';
 
 import { environment } from '../../../../../../../environments/environment';
@@ -41,7 +42,7 @@ import {
   buildPaginatedList,
   PaginatedList,
 } from '../../../../../../core/data/paginated-list.model';
-import { getFirstSucceededRemoteDataPayload } from '../../../../../../core/shared/operators';
+import { getFirstCompletedRemoteData } from '../../../../../../core/shared/operators';
 import { PageInfo } from '../../../../../../core/shared/page-info.model';
 import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
@@ -117,7 +118,9 @@ export class DsDynamicTagComponent extends DsDynamicVocabularyComponent implemen
           return observableOf({ list: [] });
         } else {
           return this.vocabularyService.getVocabularyEntriesByValue(term, false, this.model.vocabularyOptions, new PageInfo()).pipe(
-            getFirstSucceededRemoteDataPayload(),
+            timeout({ each: 30000 }),
+            getFirstCompletedRemoteData(),
+            map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
             tap(() => this.searchFailed = false),
             catchError(() => {
               this.searchFailed = true;

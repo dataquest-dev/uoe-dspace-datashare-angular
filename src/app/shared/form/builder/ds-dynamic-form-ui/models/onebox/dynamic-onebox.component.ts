@@ -31,6 +31,7 @@ import {
 } from '@ng-dynamic-forms/core';
 import { TranslateModule } from '@ngx-translate/core';
 import {
+  EMPTY,
   Observable,
   of as observableOf,
   Subject,
@@ -41,11 +42,13 @@ import {
   debounceTime,
   distinctUntilChanged,
   filter,
+  finalize,
   map,
   merge,
   switchMap,
   take,
   tap,
+  timeout,
 } from 'rxjs/operators';
 
 import {
@@ -53,7 +56,10 @@ import {
   PaginatedList,
 } from '../../../../../../core/data/paginated-list.model';
 import { ConfidenceType } from '../../../../../../core/shared/confidence-type';
-import { getFirstSucceededRemoteDataPayload } from '../../../../../../core/shared/operators';
+import {
+  getFirstCompletedRemoteData,
+  getFirstSucceededRemoteDataPayload,
+} from '../../../../../../core/shared/operators';
 import { PageInfo } from '../../../../../../core/shared/page-info.model';
 import { Vocabulary } from '../../../../../../core/submission/vocabularies/models/vocabulary.model';
 import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
@@ -155,7 +161,9 @@ export class DsDynamicOneboxComponent extends DsDynamicVocabularyComponent imple
             false,
             this.model.vocabularyOptions,
             this.pageInfo).pipe(
-            getFirstSucceededRemoteDataPayload(),
+            timeout({ each: 30000 }),
+            getFirstCompletedRemoteData(),
+            map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
             tap(() => this.searchFailed = false),
             catchError(() => {
               this.searchFailed = true;
@@ -326,12 +334,14 @@ export class DsDynamicOneboxComponent extends DsDynamicVocabularyComponent imple
     let result: string;
     if (init) {
       this.changeLoadingInitialValueStatus(true);
-      this.getInitValueFromModel(true)
-        .subscribe((formValue: FormFieldMetadataValueObject) => {
-          this.changeLoadingInitialValueStatus(false);
-          this.currentValue = formValue;
-          this.cdr.detectChanges();
-        });
+      this.getInitValueFromModel(true).pipe(
+        timeout({ each: 30000 }),
+        catchError(() => EMPTY),
+        finalize(() => this.changeLoadingInitialValueStatus(false)),
+      ).subscribe((formValue: FormFieldMetadataValueObject) => {
+        this.currentValue = formValue;
+        this.cdr.detectChanges();
+      });
     } else {
       if (isEmpty(value)) {
         result = '';

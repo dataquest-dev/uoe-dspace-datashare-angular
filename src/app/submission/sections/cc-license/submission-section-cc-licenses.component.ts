@@ -25,22 +25,26 @@ import {
   Subscription,
 } from 'rxjs';
 import {
+  catchError,
   distinctUntilChanged,
   filter,
+  finalize,
   map,
   take,
   tap,
+  timeout,
 } from 'rxjs/operators';
 
 import { ConfigurationDataService } from '../../../core/data/configuration-data.service';
 import { FindListOptions } from '../../../core/data/find-list-options.model';
+import { buildPaginatedList } from '../../../core/data/paginated-list.model';
 import { JsonPatchOperationPathCombiner } from '../../../core/json-patch/builder/json-patch-operation-path-combiner';
 import { JsonPatchOperationsBuilder } from '../../../core/json-patch/builder/json-patch-operations-builder';
 import {
   getFirstCompletedRemoteData,
-  getFirstSucceededRemoteDataPayload,
   getRemoteDataPayload,
 } from '../../../core/shared/operators';
+import { PageInfo } from '../../../core/shared/page-info.model';
 import {
   Field,
   Option,
@@ -403,13 +407,16 @@ export class SubmissionSectionCcLicensesComponent extends SectionModelComponent 
 
     this.subscriptions.push(
       this.submissionCcLicensesDataService.findAll(this.ccLicenceOptions).pipe(
-        getFirstSucceededRemoteDataPayload(),
+        timeout({ each: 30000 }),
+        getFirstCompletedRemoteData(),
+        map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
         tap((response) => this._isLastPage = response.pageInfo.currentPage === response.pageInfo.totalPages),
         map((list) => list.page),
+        catchError(() => observableOf([])),
+        finalize(() => this.isLoading = false),
       ).subscribe(
         (licenses) => {
           this.submissionCcLicenses = [...this.submissionCcLicenses, ...licenses];
-          this.isLoading = false;
           this.ref.detectChanges();
         },
       ),
