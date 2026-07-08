@@ -120,6 +120,7 @@ describe('MetadataUriValuesComponent', () => {
         const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
         expect(wrapper).not.toBeNull();
         expect(wrapper.nativeElement.classList).not.toContain('d-none');
+        expect(fixture.debugElement.query(By.css('.simple-view-element-header'))).not.toBeNull();
       });
 
       it('should render only the DOI value as a link (not the handle)', () => {
@@ -162,6 +163,29 @@ describe('MetadataUriValuesComponent', () => {
         const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
         expect(wrapper).not.toBeNull();
         expect(wrapper.nativeElement.classList).not.toContain('d-none');
+      });
+    });
+
+    describe('and multiple DOIs are present followed by a non-DOI value', () => {
+      beforeEach(() => {
+        comp.doiField = true;
+        comp.separator = '<br/>';
+        comp.mdValues = [
+          { language: 'en_US', value: 'https://doi.org/10.1234/one' },
+          { language: 'en_US', value: 'https://doi.org/10.5678/two' },
+          { language: 'en_US', value: 'https://hdl.handle.net/123456789/99' },
+        ] as MetadataValue[];
+        fixture.detectChanges();
+      });
+
+      it('should render only the DOI values as links', () => {
+        expect(fixture.debugElement.queryAll(By.css('a')).length).toBe(2);
+      });
+
+      it('should only put a separator between the DOIs, not a trailing one after the last DOI', () => {
+        // exactly one separator between the two visible DOIs (computed against the DOI subset,
+        // not the full metadata array, so the trailing handle cannot add a stray separator)
+        expect(fixture.debugElement.queryAll(By.css('a span')).length).toBe(1);
       });
     });
   });

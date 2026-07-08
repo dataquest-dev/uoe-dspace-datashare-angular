@@ -65,5 +65,13 @@ export class MetadataUriValuesComponent extends MetadataValuesComponent {
    * rendered as a link and the field is hidden when it has no value.
    */
   @Input() doiField = false;
+
+  /**
+   * The DOI values (https://doi.org/...) among {@link mdValues}. Used in {@link doiField} mode so
+   * that only DOIs are shown as links and the separator is computed against the visible DOIs only.
+   */
+  get doiValues(): MetadataValue[] {
+    return (this.mdValues ?? []).filter(v => typeof v.value === 'string' && v.value.startsWith('https://doi.org'));
+  }
   // DATASHARE - end
 }
