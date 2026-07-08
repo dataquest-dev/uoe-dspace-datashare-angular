@@ -16,9 +16,12 @@ import {
 
 import { APP_CONFIG } from '../../../../config/app-config.interface';
 import { environment } from '../../../../environments/environment';
+import { ConfigurationDataService } from '../../../core/data/configuration-data.service';
+import { ConfigurationProperty } from '../../../core/shared/configuration-property.model';
 import { MetadataValue } from '../../../core/shared/metadata.models';
 import { isNotEmpty } from '../../../shared/empty.util';
 import { TranslateLoaderMock } from '../../../shared/mocks/translate-loader.mock';
+import { createSuccessfulRemoteDataObject$ } from '../../../shared/remote-data.utils';
 import { MetadataUriValuesComponent } from './metadata-uri-values.component';
 
 let comp: MetadataUriValuesComponent;
@@ -38,8 +41,18 @@ const mockSeperator = '<br/>';
 const mockLabel = 'fake.message';
 const mockLinkText = 'fake link text';
 
+// Controls what the (stubbed) backend returns for the identifier.doi.resolver config property.
+// Empty => the component falls back to its default resolver (https://doi.org).
+let doiResolverConfigValues: string[] = [];
+const configurationServiceStub = {
+  findByPropertyName: (name: string) => createSuccessfulRemoteDataObject$(
+    Object.assign(new ConfigurationProperty(), { name, values: doiResolverConfigValues }),
+  ),
+};
+
 describe('MetadataUriValuesComponent', () => {
   beforeEach(waitForAsync(() => {
+    doiResolverConfigValues = [];
     TestBed.configureTestingModule({
       imports: [TranslateModule.forRoot({
         loader: {
@@ -49,6 +62,7 @@ describe('MetadataUriValuesComponent', () => {
       }), MetadataUriValuesComponent],
       providers: [
         { provide: APP_CONFIG, useValue: environment },
+        { provide: ConfigurationDataService, useValue: configurationServiceStub },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).overrideComponent(MetadataUriValuesComponent, {
@@ -186,6 +200,29 @@ describe('MetadataUriValuesComponent', () => {
         // exactly one separator between the two visible DOIs (computed against the DOI subset,
         // not the full metadata array, so the trailing handle cannot add a stray separator)
         expect(fixture.debugElement.queryAll(By.css('a span')).length).toBe(1);
+      });
+    });
+
+    describe('and a custom DOI resolver is configured in the backend (identifier.doi.resolver)', () => {
+      beforeEach(() => {
+        // The backend resolver is not the default https://doi.org
+        doiResolverConfigValues = ['https://doi.example.org'];
+        // Re-create the component so ngOnInit reads the configured resolver with doiField already set
+        fixture = TestBed.createComponent(MetadataUriValuesComponent);
+        comp = fixture.componentInstance;
+        comp.doiField = true;
+        comp.label = mockLabel;
+        comp.mdValues = [
+          { language: 'en_US', value: 'https://doi.example.org/10.1234/configured' },
+          { language: 'en_US', value: 'https://doi.org/10.5678/default-resolver' },
+        ] as MetadataValue[];
+        fixture.detectChanges();
+      });
+
+      it('should treat values matching the configured resolver as DOIs', () => {
+        const links = fixture.debugElement.queryAll(By.css('a'));
+        expect(links.length).toBe(1);
+        expect(links[0].nativeElement.getAttribute('href')).toBe('https://doi.example.org/10.1234/configured');
       });
     });
   });
