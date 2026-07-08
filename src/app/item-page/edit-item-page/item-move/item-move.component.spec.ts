@@ -150,7 +150,20 @@ describe('ItemMoveComponent', () => {
         comp.inheritPolicies = false;
         comp.moveToCollection();
 
-        expect(itemDataService.moveToCollection).toHaveBeenCalledWith('item-id', collection1, false);
+        // keepEmbargoPolicies is only meaningful when inheriting; not inheriting always sends true
+        expect(itemDataService.moveToCollection).toHaveBeenCalledWith('item-id', collection1, false, true);
+      });
+      it('should pass keepEmbargoPolicies through when inheriting policies', () => {
+        comp.item = Object.assign(new Item(), {
+          id: 'item-id',
+          uuid: 'item-id',
+        });
+        comp.selectedCollection = collection1;
+        comp.inheritPolicies = true;
+        comp.keepEmbargoPolicies = false;
+        comp.moveToCollection();
+
+        expect(itemDataService.moveToCollection).toHaveBeenCalledWith('item-id', collection1, true, false);
       });
       it('should call notificationsService success message on success', () => {
         comp.moveToCollection();
