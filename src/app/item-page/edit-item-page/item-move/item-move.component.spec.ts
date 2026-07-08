@@ -150,7 +150,7 @@ describe('ItemMoveComponent', () => {
         comp.inheritPolicies = false;
         comp.moveToCollection();
 
-        // keepEmbargoPolicies is only meaningful when inheriting; not inheriting always sends true
+        // keepEmbargoPolicies defaults to true; it is only sent on the request URL when inheriting
         expect(itemDataService.moveToCollection).toHaveBeenCalledWith('item-id', collection1, false, true);
       });
       it('should pass keepEmbargoPolicies through when inheriting policies', () => {

@@ -152,9 +152,10 @@ export class ItemMoveComponent implements OnInit {
    */
   moveToCollection() {
     this.processing = true;
+    // keepEmbargoPolicies is only sent (and only matters) when inheriting; getMoveItemEndpoint omits
+    // it otherwise, so we can pass it straight through.
     const move$ = this.itemDataService.moveToCollection(
-      this.item.id, this.selectedCollection, this.inheritPolicies,
-      this.inheritPolicies ? this.keepEmbargoPolicies : true,
+      this.item.id, this.selectedCollection, this.inheritPolicies, this.keepEmbargoPolicies,
     ).pipe(getFirstCompletedRemoteData());
 
     move$.subscribe((response: RemoteData<any>) => {
