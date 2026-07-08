@@ -34,10 +34,12 @@ import { of as observableOf } from 'rxjs';
 import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
 import { VocabularyOptions } from '../../../../../../core/submission/vocabularies/models/vocabulary-options.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
+import { NotificationsService } from '../../../../../notifications/notifications.service';
 import {
   mockDynamicFormLayoutService,
   mockDynamicFormValidationService,
 } from '../../../../../testing/dynamic-form-mock-services';
+import { NotificationsServiceStub } from '../../../../../testing/notifications-service.stub';
 import { createTestComponent } from '../../../../../testing/utils.test';
 import { VocabularyServiceStub } from '../../../../../testing/vocabulary-service.stub';
 import { Chips } from '../../../../chips/models/chips.model';
@@ -109,6 +111,7 @@ describe('DsDynamicTagComponent test suite', () => {
         TestComponent,
       ],
       providers: [
+        { provide: NotificationsService, useValue: new NotificationsServiceStub() },
         ChangeDetectorRef,
         DsDynamicTagComponent,
         { provide: VocabularyService, useValue: vocabularyServiceStub },
