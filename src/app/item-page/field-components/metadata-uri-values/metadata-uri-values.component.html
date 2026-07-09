@@ -1,15 +1,20 @@
 <!-- DATASHARE - start -->
-<!-- Added *ngIf="hasDoiLink" and  *ngIf="mdValue.value.startsWith('https://doi.org')" to only render DOIs-->
-<ds-metadata-field-wrapper *ngIf="hasDoiLink" [label]="label | translate">
-    <!-- <a class="dont-break-out" *ngFor="let mdValue of mdValues; let last=last;" [href]="mdValue.value" [target]="hasInternalLink(mdValue.value) ? '_self' : '_blank'" role="link" tabindex="0">
-    {{ linktext || mdValue.value }}<span *ngIf="!last" [innerHTML]="separator"></span>
-    </a> -->
-    <ng-container *ngFor="let mdValue of mdValues; let last=last;">
-        <a class="dont-break-out" *ngIf="mdValue.value.startsWith('https://doi.org')" [href]="mdValue.value"
-            [target]="hasInternalLink(mdValue.value) ? '_self' : '_blank'" role="link" tabindex="0">
-            {{ linktext || mdValue.value }}
-            <span *ngIf="!last" [innerHTML]="separator"></span>
-        </a>
-    </ng-container>
+<!--
+  doiField mode (the DOI / "Persistent Identifier" field on the simple item view):
+   - only DOI values (starting with the configured resolver, see doiValues) are shown as links;
+     the handle is hidden;
+   - hideIfNoTextContent is disabled, so the field/label is always shown;
+   - while a DOI is still queued for registration by the scheduled task (no DOI value yet), a
+     "DOI registration in progress" message is shown instead of an empty value. Once registration
+     completes the DOI link is shown instead.
+  Default mode (doiField = false) keeps the upstream generic behaviour: every URI value is rendered
+  as a link and the field is hidden when it has no value.
+-->
+<ds-metadata-field-wrapper [label]="label | translate" [hideIfNoTextContent]="!doiField">
+    <a class="dont-break-out" *ngFor="let mdValue of (doiField ? doiValues : mdValues); let last=last;"
+        [href]="mdValue.value" [target]="hasInternalLink(mdValue.value) ? '_self' : '_blank'" role="link" tabindex="0">
+        {{ linktext || mdValue.value }}<span *ngIf="!last" [innerHTML]="separator"></span>
+    </a>
+    <span *ngIf="doiField && doiValues.length === 0">{{ 'item.page.doi.pending' | translate }}</span>
 </ds-metadata-field-wrapper>
 <!-- DATASHARE - end -->

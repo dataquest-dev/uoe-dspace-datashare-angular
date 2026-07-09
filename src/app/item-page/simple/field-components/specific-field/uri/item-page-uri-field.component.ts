@@ -42,4 +42,13 @@ export class ItemPageUriFieldComponent extends ItemPageFieldComponent {
    */
   @Input() label: string;
 
+  // DATASHARE - start
+  /**
+   * When true, this field is rendered as a DOI ("Persistent Identifier") field: only DOI links
+   * are shown and the field label is always displayed, even while the DOI is still queued for
+   * registration by the scheduled task (no DOI value yet). See {@link MetadataUriValuesComponent}.
+   */
+  @Input() doiField = false;
+  // DATASHARE - end
+
 }

@@ -7,6 +7,7 @@ import {
   TestBed,
   waitForAsync,
 } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import {
   TranslateLoader,
   TranslateModule,
@@ -16,8 +17,10 @@ import { APP_CONFIG } from '../../../../../../config/app-config.interface';
 import { environment } from '../../../../../../environments/environment';
 import { BrowseService } from '../../../../../core/browse/browse.service';
 import { BrowseDefinitionDataService } from '../../../../../core/browse/browse-definition-data.service';
+import { ConfigurationDataService } from '../../../../../core/data/configuration-data.service';
 import { BrowseDefinitionDataServiceStub } from '../../../../../shared/testing/browse-definition-data-service.stub';
 import { BrowseServiceStub } from '../../../../../shared/testing/browse-service.stub';
+import { ConfigurationDataServiceStub } from '../../../../../shared/testing/configuration-data.service.stub';
 import { TranslateLoaderMock } from '../../../../../shared/testing/translate-loader.mock';
 import { MetadataUriValuesComponent } from '../../../../field-components/metadata-uri-values/metadata-uri-values.component';
 import { mockItemWithMetadataFieldsAndValue } from '../item-page-field.component.spec';
@@ -43,6 +46,7 @@ describe('ItemPageUriFieldComponent', () => {
         { provide: APP_CONFIG, useValue: environment },
         { provide: BrowseDefinitionDataService, useValue: BrowseDefinitionDataServiceStub },
         { provide: BrowseService, useValue: BrowseServiceStub },
+        { provide: ConfigurationDataService, useClass: ConfigurationDataServiceStub },
       ],
       schemas: [NO_ERRORS_SCHEMA],
     }).overrideComponent(ItemPageUriFieldComponent, {
@@ -62,4 +66,27 @@ describe('ItemPageUriFieldComponent', () => {
   it('should display display the correct metadata value', () => {
     expect(fixture.nativeElement.innerHTML).toContain(mockValue);
   });
+
+  // DATASHARE - start
+  describe('when used as a DOI field with a pending (unregistered) DOI', () => {
+    beforeEach(() => {
+      // The item only has a handle, the DOI is still queued for registration by the CRON job
+      comp.item = mockItemWithMetadataFieldsAndValue([mockField], 'https://hdl.handle.net/123456789/1');
+      comp.fields = [mockField];
+      comp.label = mockLabel;
+      comp.doiField = true;
+      fixture.detectChanges();
+    });
+
+    it('should still display the DOI field wrapper even though no DOI link is present yet', () => {
+      const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
+      expect(wrapper).not.toBeNull();
+      expect(wrapper.nativeElement.classList).not.toContain('d-none');
+    });
+
+    it('should not render the handle as a link', () => {
+      expect(fixture.debugElement.queryAll(By.css('a')).length).toBe(0);
+    });
+  });
+  // DATASHARE - end
 });
