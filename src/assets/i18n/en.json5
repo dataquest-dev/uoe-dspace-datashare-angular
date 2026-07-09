@@ -7154,6 +7154,8 @@
 
   "item.page.doi": "Persistent Identifier",
 
+  "item.page.doi.pending": "DOI registration in progress",
+
   "item.page.date.available": "Date Available",
 
   "item.page.replaced": "Relation (Is Replaced By)",

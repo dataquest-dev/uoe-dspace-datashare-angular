@@ -142,6 +142,10 @@ describe('MetadataUriValuesComponent', () => {
         expect(links.length).toBe(1);
         expect(links[0].nativeElement.getAttribute('href')).toBe('https://doi.org/10.1234/registered');
       });
+
+      it('should not show the "registration in progress" message once a DOI is present', () => {
+        expect(fixture.nativeElement.textContent).not.toContain('item.page.doi.pending');
+      });
     });
 
     describe('and the DOI has not been registered yet (scheduled task pending)', () => {
@@ -164,6 +168,10 @@ describe('MetadataUriValuesComponent', () => {
       it('should not render the non-DOI (handle) value as a link', () => {
         expect(fixture.debugElement.queryAll(By.css('a')).length).toBe(0);
       });
+
+      it('should show a "DOI registration in progress" message instead of an empty value', () => {
+        expect(fixture.nativeElement.textContent).toContain('item.page.doi.pending');
+      });
     });
 
     describe('and the item has no identifier metadata at all', () => {
@@ -173,10 +181,11 @@ describe('MetadataUriValuesComponent', () => {
         fixture.detectChanges();
       });
 
-      it('should still display the (empty) DOI field wrapper', () => {
+      it('should still display the DOI field wrapper with the "registration in progress" message', () => {
         const wrapper = fixture.debugElement.query(By.css('.simple-view-element'));
         expect(wrapper).not.toBeNull();
         expect(wrapper.nativeElement.classList).not.toContain('d-none');
+        expect(fixture.nativeElement.textContent).toContain('item.page.doi.pending');
       });
     });
 
