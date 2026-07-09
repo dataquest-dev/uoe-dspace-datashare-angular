@@ -31,15 +31,21 @@ import { TranslateModule } from '@ngx-translate/core';
 import findKey from 'lodash/findKey';
 import {
   BehaviorSubject,
+  of as observableOf,
   Subscription,
 } from 'rxjs';
 import {
+  catchError,
   map,
   tap,
+  timeout,
 } from 'rxjs/operators';
 
-import { PaginatedList } from '../../../../../../core/data/paginated-list.model';
-import { getFirstSucceededRemoteDataPayload } from '../../../../../../core/shared/operators';
+import {
+  buildPaginatedList,
+  PaginatedList,
+} from '../../../../../../core/data/paginated-list.model';
+import { getFirstCompletedRemoteData } from '../../../../../../core/shared/operators';
 import { PageInfo } from '../../../../../../core/shared/page-info.model';
 import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
@@ -209,7 +215,10 @@ export class DsDynamicListComponent extends DynamicFormControlComponent implemen
 
     this.subs.push(
       this.vocabularyService.getVocabularyEntries(this.model.vocabularyOptions, this.nextPageInfo).pipe(
-        getFirstSucceededRemoteDataPayload(),
+        timeout({ each: 15000 }),
+        getFirstCompletedRemoteData(),
+        map((rd) => (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), [])),
+        catchError(() => observableOf(buildPaginatedList(new PageInfo(), []))),
         tap((response) => this.setPaginationInfo(response)),
         map(entries => entries.page),
       ).subscribe((allEntries: VocabularyEntry[]) => {

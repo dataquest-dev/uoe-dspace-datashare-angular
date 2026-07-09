@@ -14,17 +14,21 @@ import findIndex from 'lodash/findIndex';
 import isEqual from 'lodash/isEqual';
 import {
   combineLatest as observableCombineLatest,
+  EMPTY,
   Observable,
   Subscription,
 } from 'rxjs';
 import {
+  catchError,
   distinctUntilChanged,
   filter,
+  finalize,
   find,
   map,
   mergeMap,
   take,
   tap,
+  timeout,
 } from 'rxjs/operators';
 
 import { environment } from '../../../../environments/environment';
@@ -217,7 +221,10 @@ export class SubmissionSectionFormComponent extends SectionModelComponent {
             getRemoteDataPayload()),
           this.sectionService.isSectionReadOnly(this.submissionId, this.sectionData.id, this.submissionService.getSubmissionScope()),
         ])),
-      take(1))
+      take(1),
+      timeout({ each: 15000 }),
+      catchError(() => EMPTY),
+      finalize(() => this.isLoading = false))
       .subscribe(([sectionData, submissionObject, isSectionReadOnly]: [WorkspaceitemSectionFormObject, SubmissionObject, boolean]) => {
         if (isUndefined(this.formModel)) {
           // this.sectionData.errorsToShow = [];

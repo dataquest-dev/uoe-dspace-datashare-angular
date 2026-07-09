@@ -35,6 +35,9 @@ import {
 import {
   catchError,
   distinctUntilChanged,
+  finalize,
+  map,
+  timeout,
 } from 'rxjs/operators';
 
 import {
@@ -42,7 +45,7 @@ import {
   PaginatedList,
 } from '../../../../../../core/data/paginated-list.model';
 import { ConfidenceType } from '../../../../../../core/shared/confidence-type';
-import { getFirstSucceededRemoteDataPayload } from '../../../../../../core/shared/operators';
+import { getFirstCompletedRemoteData } from '../../../../../../core/shared/operators';
 import { PageInfo } from '../../../../../../core/shared/page-info.model';
 import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
@@ -276,14 +279,20 @@ export class DsDynamicLookupComponent extends DsDynamicVocabularyComponent imple
       this.model.vocabularyOptions,
       this.pageInfo,
     ).pipe(
-      getFirstSucceededRemoteDataPayload(),
-      catchError(() =>
-        observableOf(buildPaginatedList(
-          new PageInfo(),
-          [],
-        )),
-      ),
-      distinctUntilChanged())
+      timeout({ each: 15000 }),
+      getFirstCompletedRemoteData(),
+      map((rd) => {
+        if (!rd.hasSucceeded) {
+          this.notifyVocabularyLoadError();
+        }
+        return (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), []);
+      }),
+      catchError(() => {
+        this.notifyVocabularyLoadError();
+        return observableOf(buildPaginatedList(new PageInfo(), []));
+      }),
+      distinctUntilChanged(),
+      finalize(() => this.loading = false))
       .subscribe((list: PaginatedList<VocabularyEntry>) => {
         this.optionsList = list.page;
         this.updatePageInfo(
@@ -292,7 +301,6 @@ export class DsDynamicLookupComponent extends DsDynamicVocabularyComponent imple
           list.pageInfo.totalElements,
           list.pageInfo.totalPages,
         );
-        this.loading = false;
         this.cdr.detectChanges();
       }));
   }

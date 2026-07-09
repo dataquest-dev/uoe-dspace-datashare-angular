@@ -34,9 +34,10 @@ import {
 import {
   catchError,
   distinctUntilChanged,
+  finalize,
   map,
   take,
-  tap,
+  timeout,
 } from 'rxjs/operators';
 import {
   APP_DATA_SERVICES_MAP,
@@ -51,7 +52,7 @@ import {
 } from '../../../../../../core/data/paginated-list.model';
 import { RemoteData } from '../../../../../../core/data/remote-data';
 import { lazyDataService } from '../../../../../../core/lazy-data-service';
-import { getFirstSucceededRemoteDataPayload } from '../../../../../../core/shared/operators';
+import { getFirstCompletedRemoteData } from '../../../../../../core/shared/operators';
 import { PageInfo } from '../../../../../../core/shared/page-info.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
 import { BtnDisabledDirective } from '../../../../../btn-disabled.directive';
@@ -161,9 +162,19 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
   loadOptions(fromInit: boolean) {
     this.loading = true;
     this.getDataFromService().pipe(
-      getFirstSucceededRemoteDataPayload(),
-      catchError(() => observableOf(buildPaginatedList(new PageInfo(), []))),
-      tap(() => this.loading = false),
+      timeout({ each: 15000 }),
+      getFirstCompletedRemoteData(),
+      map((rd) => {
+        if (!rd.hasSucceeded) {
+          this.notifyVocabularyLoadError();
+        }
+        return (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), []);
+      }),
+      catchError(() => {
+        this.notifyVocabularyLoadError();
+        return observableOf(buildPaginatedList(new PageInfo(), []));
+      }),
+      finalize(() => this.loading = false),
     ).subscribe((list: PaginatedList<CacheableObject>) => {
       this.optionsList = list.page;
       if (fromInit && this.model.value) {
@@ -288,13 +299,19 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
         this.pageInfo.totalPages,
       );
       this.getDataFromService().pipe(
-        getFirstSucceededRemoteDataPayload(),
-        catchError(() => observableOf(buildPaginatedList(
-          new PageInfo(),
-          [],
-        )),
-        ),
-        tap(() => this.loading = false))
+        timeout({ each: 15000 }),
+        getFirstCompletedRemoteData(),
+        map((rd) => {
+          if (!rd.hasSucceeded) {
+            this.notifyVocabularyLoadError();
+          }
+          return (rd.hasSucceeded && hasValue(rd.payload)) ? rd.payload : buildPaginatedList(new PageInfo(), []);
+        }),
+        catchError(() => {
+          this.notifyVocabularyLoadError();
+          return observableOf(buildPaginatedList(new PageInfo(), []));
+        }),
+        finalize(() => this.loading = false))
         .subscribe((list: PaginatedList<any>) => {
           this.optionsList = this.optionsList.concat(list.page);
           this.updatePageInfo(

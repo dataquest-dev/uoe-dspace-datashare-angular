@@ -34,10 +34,12 @@ import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/
 import { VocabularyOptions } from '../../../../../../core/submission/vocabularies/models/vocabulary-options.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
 import { BtnDisabledDirective } from '../../../../../btn-disabled.directive';
+import { NotificationsService } from '../../../../../notifications/notifications.service';
 import {
   mockDynamicFormLayoutService,
   mockDynamicFormValidationService,
 } from '../../../../../testing/dynamic-form-mock-services';
+import { NotificationsServiceStub } from '../../../../../testing/notifications-service.stub';
 import { createTestComponent } from '../../../../../testing/utils.test';
 import { VocabularyServiceStub } from '../../../../../testing/vocabulary-service.stub';
 import { ObjNgFor } from '../../../../../utils/object-ngfor.pipe';
@@ -178,6 +180,7 @@ describe('Dynamic Lookup component', () => {
         BtnDisabledDirective,
       ],
       providers: [
+        { provide: NotificationsService, useValue: new NotificationsServiceStub() },
         ChangeDetectorRef,
         DsDynamicLookupComponent,
         { provide: VocabularyService, useValue: vocabularyServiceStub },

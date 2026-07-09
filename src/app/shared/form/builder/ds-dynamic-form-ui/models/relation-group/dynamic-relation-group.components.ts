@@ -34,16 +34,17 @@ import {
   Subscription,
 } from 'rxjs';
 import {
+  catchError,
   filter,
   map,
   mergeMap,
   scan,
+  timeout,
 } from 'rxjs/operators';
 
 import { environment } from '../../../../../../../environments/environment';
 import { SubmissionFormsModel } from '../../../../../../core/config/models/config-submission-forms.model';
-import { getFirstSucceededRemoteDataPayload } from '../../../../../../core/shared/operators';
-import { VocabularyEntryDetail } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry-detail.model';
+import { getFirstCompletedRemoteData } from '../../../../../../core/shared/operators';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
 import { shrinkInOut } from '../../../../../animations/shrink';
 import { BtnDisabledDirective } from '../../../../../btn-disabled.directive';
@@ -285,14 +286,16 @@ export class DsDynamicRelationGroupComponent extends DynamicFormControlComponent
                   valueObj[fieldName].authority,
                   (model as any).vocabularyOptions.name,
                 ).pipe(
-                  getFirstSucceededRemoteDataPayload(),
-                  map((entryDetail: VocabularyEntryDetail) => Object.assign(
+                  timeout({ each: 15000 }),
+                  getFirstCompletedRemoteData(),
+                  map((entryDetailRD) => (entryDetailRD.hasSucceeded && hasValue(entryDetailRD.payload)) ? Object.assign(
                     new FormFieldMetadataValueObject(),
                     valueObj[fieldName],
                     {
-                      otherInformation: entryDetail.otherInformation,
-                    }),
-                  ));
+                      otherInformation: entryDetailRD.payload.otherInformation,
+                    }) : valueObj[fieldName]),
+                  catchError(() => observableOf(valueObj[fieldName])),
+                );
               } else {
                 return$ = observableOf(valueObj[fieldName]);
               }
