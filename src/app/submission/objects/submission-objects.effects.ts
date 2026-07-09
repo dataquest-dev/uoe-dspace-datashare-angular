@@ -16,6 +16,7 @@ import {
 } from 'rxjs';
 import {
   catchError,
+  concatMap,
   filter,
   map,
   mergeMap,
@@ -157,7 +158,7 @@ export class SubmissionObjectEffects {
    */
   saveSubmission$ = createEffect(() => this.actions$.pipe(
     ofType(SubmissionObjectActionTypes.SAVE_SUBMISSION_FORM),
-    switchMap((action: SaveSubmissionFormAction) => {
+    concatMap((action: SaveSubmissionFormAction) => {
       return this.operationsService.jsonPatchByResourceType(
         this.submissionService.getSubmissionObjectLinkName(),
         action.payload.submissionId,
@@ -171,7 +172,7 @@ export class SubmissionObjectEffects {
    */
   saveForLaterSubmission$ = createEffect(() => this.actions$.pipe(
     ofType(SubmissionObjectActionTypes.SAVE_FOR_LATER_SUBMISSION_FORM),
-    switchMap((action: SaveForLaterSubmissionFormAction) => {
+    concatMap((action: SaveForLaterSubmissionFormAction) => {
       return this.operationsService.jsonPatchByResourceType(
         this.submissionService.getSubmissionObjectLinkName(),
         action.payload.submissionId,
@@ -211,7 +212,7 @@ export class SubmissionObjectEffects {
    */
   saveSection$ = createEffect(() => this.actions$.pipe(
     ofType(SubmissionObjectActionTypes.SAVE_SUBMISSION_SECTION_FORM),
-    switchMap((action: SaveSubmissionSectionFormAction) => {
+    concatMap((action: SaveSubmissionSectionFormAction) => {
       return this.operationsService.jsonPatchByResourceID(
         this.submissionService.getSubmissionObjectLinkName(),
         action.payload.submissionId,
@@ -235,7 +236,7 @@ export class SubmissionObjectEffects {
   saveAndDeposit$ = createEffect(() => this.actions$.pipe(
     ofType(SubmissionObjectActionTypes.SAVE_AND_DEPOSIT_SUBMISSION),
     withLatestFrom(this.submissionService.hasUnsavedModification()),
-    switchMap(([action, hasUnsavedModification]: [SaveAndDepositSubmissionAction, boolean]) => {
+    concatMap(([action, hasUnsavedModification]: [SaveAndDepositSubmissionAction, boolean]) => {
       let response$: Observable<SubmissionObject[]>;
       if (hasUnsavedModification) {
         response$ = this.operationsService.jsonPatchByResourceType(
