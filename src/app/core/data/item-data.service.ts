@@ -273,16 +273,14 @@ export abstract class BaseItemDataService extends IdentifiableDataService<Item> 
    * Get the endpoint to move the item
    * @param itemId
    * @param inheritPolicies whether to inherit the destination collection's default policies
-   * @param keepEmbargoPolicies when inheriting, whether to keep an existing embargo (only the
-   *                            non-embargo access is inherited) instead of letting the inherited
-   *                            default read access lift it
+   * @param keepEmbargoPolicies when inheriting, keep an existing embargo instead of letting it be lifted
    */
   public getMoveItemEndpoint(itemId: string, inheritPolicies: boolean, keepEmbargoPolicies = true): Observable<string> {
     return this.halService.getEndpoint(this.linkPath).pipe(
       map((endpoint: string) => this.getIDHref(endpoint, itemId)),
       map((endpoint: string) => {
         let href = `${endpoint}/owningCollection?inheritPolicies=${inheritPolicies}`;
-        // keepEmbargoPolicies only affects the move when policies are inherited, so only send it then.
+        // Only relevant when inheriting.
         if (inheritPolicies) {
           href += `&keepEmbargoPolicies=${keepEmbargoPolicies}`;
         }

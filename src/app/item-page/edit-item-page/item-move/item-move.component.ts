@@ -74,11 +74,7 @@ export class ItemMoveComponent implements OnInit {
 
   inheritPolicies = false;
 
-  /**
-   * When inheriting the destination collection's policies, whether to keep an existing embargo
-   * (only the non-embargo access is inherited) instead of letting the inherited default read
-   * access lift it. Only relevant while {@link inheritPolicies} is enabled.
-   */
+  /** When inheriting, keep an existing embargo instead of letting the inherited default read lift it. */
   keepEmbargoPolicies = true;
   itemRD$: Observable<RemoteData<Item>>;
   originalCollection: Collection;
@@ -152,8 +148,6 @@ export class ItemMoveComponent implements OnInit {
    */
   moveToCollection() {
     this.processing = true;
-    // keepEmbargoPolicies is only sent (and only matters) when inheriting; getMoveItemEndpoint omits
-    // it otherwise, so we can pass it straight through.
     const move$ = this.itemDataService.moveToCollection(
       this.item.id, this.selectedCollection, this.inheritPolicies, this.keepEmbargoPolicies,
     ).pipe(getFirstCompletedRemoteData());
