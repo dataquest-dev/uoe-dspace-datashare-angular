@@ -272,11 +272,20 @@ export abstract class BaseItemDataService extends IdentifiableDataService<Item> 
   /**
    * Get the endpoint to move the item
    * @param itemId
+   * @param inheritPolicies whether to inherit the destination collection's default policies
+   * @param keepEmbargoPolicies when inheriting, keep an existing embargo instead of letting it be lifted
    */
-  public getMoveItemEndpoint(itemId: string, inheritPolicies: boolean): Observable<string> {
+  public getMoveItemEndpoint(itemId: string, inheritPolicies: boolean, keepEmbargoPolicies = true): Observable<string> {
     return this.halService.getEndpoint(this.linkPath).pipe(
       map((endpoint: string) => this.getIDHref(endpoint, itemId)),
-      map((endpoint: string) => `${endpoint}/owningCollection?inheritPolicies=${inheritPolicies}`),
+      map((endpoint: string) => {
+        let href = `${endpoint}/owningCollection?inheritPolicies=${inheritPolicies}`;
+        // Only relevant when inheriting.
+        if (inheritPolicies) {
+          href += `&keepEmbargoPolicies=${keepEmbargoPolicies}`;
+        }
+        return href;
+      }),
     );
   }
 
@@ -284,15 +293,19 @@ export abstract class BaseItemDataService extends IdentifiableDataService<Item> 
    * Move the item to a different owning collection
    * @param itemId
    * @param collection
+   * @param inheritPolicies whether to inherit the destination collection's default policies
+   * @param keepEmbargoPolicies when inheriting, whether to keep an existing embargo
    */
-  public moveToCollection(itemId: string, collection: Collection, inheritPolicies: boolean): Observable<RemoteData<any>> {
+  public moveToCollection(
+    itemId: string, collection: Collection, inheritPolicies: boolean, keepEmbargoPolicies = true,
+  ): Observable<RemoteData<any>> {
     const options: HttpOptions = Object.create({});
     let headers = new HttpHeaders();
     headers = headers.append('Content-Type', 'text/uri-list');
     options.headers = headers;
 
     const requestId = this.requestService.generateRequestId();
-    const hrefObs = this.getMoveItemEndpoint(itemId, inheritPolicies);
+    const hrefObs = this.getMoveItemEndpoint(itemId, inheritPolicies, keepEmbargoPolicies);
 
     hrefObs.pipe(
       find((href: string) => hasValue(href)),

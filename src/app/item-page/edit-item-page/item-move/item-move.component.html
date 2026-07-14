@@ -32,6 +32,19 @@
                     <p>
                         {{'item.edit.move.inheritpolicies.description' | translate}}
                     </p>
+                    <p *ngIf="inheritPolicies">
+                      <label for="keepEmbargoPoliciesCheckbox">
+                        <ng-template #keepEmbargoTooltipContent>
+                          {{ 'item.edit.move.keepembargopolicies.tooltip' | translate }}
+                        </ng-template>
+                        <input type="checkbox" name="keepEmbargo" [(ngModel)]="keepEmbargoPolicies" id="keepEmbargoPoliciesCheckbox" [ngbTooltip]="keepEmbargoTooltipContent"
+                        >
+                        {{'item.edit.move.keepembargopolicies.checkbox' | translate}}
+                      </label>
+                    </p>
+                    <p *ngIf="inheritPolicies">
+                        {{'item.edit.move.keepembargopolicies.description' | translate}}
+                    </p>
                 </div>
             </div>
 

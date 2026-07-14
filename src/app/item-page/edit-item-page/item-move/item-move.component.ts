@@ -72,7 +72,10 @@ export class ItemMoveComponent implements OnInit {
 
   selectorType = DSpaceObjectType.COLLECTION;
 
-  inheritPolicies = false;
+  inheritPolicies = true;
+
+  /** When inheriting, keep an existing embargo instead of letting the inherited default read lift it. */
+  keepEmbargoPolicies = true;
   itemRD$: Observable<RemoteData<Item>>;
   originalCollection: Collection;
 
@@ -145,8 +148,9 @@ export class ItemMoveComponent implements OnInit {
    */
   moveToCollection() {
     this.processing = true;
-    const move$ = this.itemDataService.moveToCollection(this.item.id, this.selectedCollection, this.inheritPolicies)
-      .pipe(getFirstCompletedRemoteData());
+    const move$ = this.itemDataService.moveToCollection(
+      this.item.id, this.selectedCollection, this.inheritPolicies, this.keepEmbargoPolicies,
+    ).pipe(getFirstCompletedRemoteData());
 
     move$.subscribe((response: RemoteData<any>) => {
       if (response.hasSucceeded) {

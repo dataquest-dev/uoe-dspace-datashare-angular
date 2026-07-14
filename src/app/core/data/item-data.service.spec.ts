@@ -133,6 +133,27 @@ describe('ItemDataService', () => {
     });
   });
 
+  describe('getMoveItemEndpoint', () => {
+    beforeEach(() => {
+      service = initTestService();
+    });
+
+    it('should append keepEmbargoPolicies when inheriting policies', (done) => {
+      service.getMoveItemEndpoint('item-id', true, false).subscribe((href) => {
+        expect(href).toContain('item-id/owningCollection?inheritPolicies=true&keepEmbargoPolicies=false');
+        done();
+      });
+    });
+
+    it('should omit keepEmbargoPolicies when not inheriting policies', (done) => {
+      service.getMoveItemEndpoint('item-id', false, true).subscribe((href) => {
+        expect(href).toContain('item-id/owningCollection?inheritPolicies=false');
+        expect(href).not.toContain('keepEmbargoPolicies');
+        done();
+      });
+    });
+  });
+
   describe('removeMappingFromCollection', () => {
     let result;
 
