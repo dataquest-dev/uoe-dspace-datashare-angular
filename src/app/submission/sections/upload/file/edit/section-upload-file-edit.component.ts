@@ -22,12 +22,8 @@ import {
 import { DynamicDateControlValue } from '@ng-dynamic-forms/core/lib/model/dynamic-date-control.model';
 import { DynamicFormControlCondition } from '@ng-dynamic-forms/core/lib/model/misc/dynamic-form-control-relation.model';
 import { TranslateModule } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 import {
-  of,
-  Subscription,
-} from 'rxjs';
-import {
-  catchError,
   filter,
   mergeMap,
   take,
@@ -307,20 +303,11 @@ implements OnInit, OnDestroy {
    */
   ngOnInit() {
     if (this.fileData && this.formId) {
-      const canEditAccessConditions$ = this.authorizationService.isAuthorized(FeatureID.AdministratorOf).pipe(
-        catchError(() => of(false)),
-      );
-
-      const initSubscription = canEditAccessConditions$.pipe(
+      const initSubscription = this.authorizationService.isAuthorized(FeatureID.AdministratorOf).pipe(
         take(1),
       ).subscribe({
         next: (canEdit: boolean) => {
           this.canEditAccessConditions = canEdit;
-          this.formModel = this.buildFileEditForm();
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.canEditAccessConditions = false;
           this.formModel = this.buildFileEditForm();
           this.cdr.detectChanges();
         },
