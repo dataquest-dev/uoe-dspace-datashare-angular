@@ -72,7 +72,7 @@ export class ItemMoveComponent implements OnInit {
 
   selectorType = DSpaceObjectType.COLLECTION;
 
-  inheritPolicies = false;
+  inheritPolicies = true;
 
   /** When inheriting, keep an existing embargo instead of letting the inherited default read lift it. */
   keepEmbargoPolicies = true;
