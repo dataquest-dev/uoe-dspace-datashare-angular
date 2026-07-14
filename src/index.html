@@ -60,6 +60,30 @@
     if (!app || !app.firstElementChild) return;
     if (document.getElementById('__dspace_ssr_overlay')) return;
 
+    // Keep copies of the SSR component styles. Angular 17 tags server-rendered component styles
+    // with ng-app-id and REMOVES them while it hydrates and the theme system destroys/recreates
+    // the ds-themed-* instances. The clone below still carries the old _nghost/_ngcontent scope
+    // attributes, so without these copies its CSS dies mid-mask and the frozen frame visibly
+    // degrades (unstyled login button / search bar / navbar). Same trick as the Angular-15
+    // variant used for style[ng-transition], adapted to ng-app-id.
+    var ssrStyles = document.querySelectorAll('style[ng-app-id]');
+    var keptStyles = [];
+    for (var s = 0; s < ssrStyles.length; s++) {
+      var copy = document.createElement('style');
+      copy.setAttribute('data-dspace-ssr-keep', '');
+      copy.textContent = ssrStyles[s].textContent;
+      document.head.appendChild(copy);
+      keptStyles.push(copy);
+    }
+
+    // Pin the vertical scrollbar while the mask is up. The overlay is position:fixed (out of the
+    // document flow), so when hydration briefly collapses the live <ds-app> the document loses its
+    // height, the scrollbar disappears, and the whole page shoves right by the scrollbar width,
+    // then back. Forcing overflow-y:scroll keeps the gutter constant for the entire masked window.
+    var docEl = document.documentElement;
+    var prevOverflowY = docEl.style.overflowY;
+    docEl.style.overflowY = 'scroll';
+
     var overlay = document.createElement('div');
     overlay.id = '__dspace_ssr_overlay';
     // It's a visual duplicate of content the real app still exposes; hide it from a11y tree
@@ -98,6 +122,13 @@
       el.style.opacity = '0';
       setTimeout(function () {
         if (el && el.parentNode) el.parentNode.removeChild(el);
+        // Drop the kept SSR style copies (the live app's own styles are in place by now) and
+        // unpin the scrollbar.
+        for (var k = 0; k < keptStyles.length; k++) {
+          if (keptStyles[k].parentNode) keptStyles[k].parentNode.removeChild(keptStyles[k]);
+        }
+        keptStyles = [];
+        docEl.style.overflowY = prevOverflowY;
       }, 200);
     };
 
