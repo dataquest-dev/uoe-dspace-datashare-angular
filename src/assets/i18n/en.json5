@@ -2552,11 +2552,11 @@
 
   "item.edit.move.inheritpolicies.tooltip": "Warning: When enabled, the read access policy for the item and any files associated with the item will be replaced by the default read access policy of the collection. This cannot be undone.",
 
-  "item.edit.move.keepembargopolicies.checkbox": "Keep embargo policies",
+  "item.edit.move.keepembargopolicies.checkbox": "Keep this item's current embargo",
 
-  "item.edit.move.keepembargopolicies.description": "When inheriting policies, keep any existing embargo: only the non-embargo access is inherited from the destination collection.",
+  "item.edit.move.keepembargopolicies.description": "The item keeps the embargo it already has (its files stay embargoed until their original lift date). Everything else is inherited from the destination collection.",
 
-  "item.edit.move.keepembargopolicies.tooltip": "When enabled, inheriting the destination collection's policies preserves an existing embargo, so embargoed files stay embargoed until their original lift date. When disabled, the inherited default read access replaces (and lifts) the embargo.",
+  "item.edit.move.keepembargopolicies.tooltip": "This is about the embargo already on this item, not the destination collection's. When enabled, the item's existing embargo (and its original lift date) is preserved and only the non-embargo access is inherited. When disabled, the destination collection's default read access replaces it and the embargo is lifted immediately.",
 
   "item.edit.move.move": "Move",
 
