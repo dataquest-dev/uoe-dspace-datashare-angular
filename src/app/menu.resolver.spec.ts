@@ -157,6 +157,34 @@ describe('menuResolver', () => {
     });
   });
 
+  describe('createAdminMenuIfLoggedIn$', () => {
+    beforeEach(() => {
+      spyOn(resolver, 'createAdminMenu$').and.returnValue(observableOf(true));
+    });
+
+    it('should not create the admin menu for an authenticated non-admin user', (done) => {
+      authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
+
+      resolver.createAdminMenuIfLoggedIn$().subscribe((resolved) => {
+        expect(resolved).toBeTrue();
+        expect(resolver.createAdminMenu$).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('should create the admin menu for a user with an administrative role', (done) => {
+      authorizationService.isAuthorized = createSpy('isAuthorized').and.callFake((featureID: FeatureID) => {
+        return observableOf(featureID === FeatureID.CanManageGroups);
+      });
+
+      resolver.createAdminMenuIfLoggedIn$().subscribe((resolved) => {
+        expect(resolved).toBeTrue();
+        expect(resolver.createAdminMenu$).toHaveBeenCalled();
+        done();
+      });
+    });
+  });
+
   describe('createAdminMenu$', () => {
     const dontShowAdminSections = () => {
       it('should not show site admin section', () => {

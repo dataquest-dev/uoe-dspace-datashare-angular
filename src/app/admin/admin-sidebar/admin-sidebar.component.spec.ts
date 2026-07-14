@@ -23,6 +23,7 @@ import { of as observableOf } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthorizationDataService } from '../../core/data/feature-authorization/authorization-data.service';
+import { FeatureID } from '../../core/data/feature-authorization/feature-id';
 import { ScriptDataService } from '../../core/data/processes/script-data.service';
 import { Item } from '../../core/shared/item.model';
 import { MenuService } from '../../shared/menu/menu.service';
@@ -34,6 +35,7 @@ import { CSSVariableServiceStub } from '../../shared/testing/css-variable-servic
 import { MenuServiceStub } from '../../shared/testing/menu-service.stub';
 import { ThemeService } from '../../shared/theme-support/theme.service';
 import { AdminSidebarComponent } from './admin-sidebar.component';
+import createSpy = jasmine.createSpy;
 
 describe('AdminSidebarComponent', () => {
   let comp: AdminSidebarComponent;
@@ -103,6 +105,32 @@ describe('AdminSidebarComponent', () => {
     comp = fixture.componentInstance; // SearchPageComponent test instance
     comp.sections = observableOf([]);
     fixture.detectChanges();
+  });
+
+  describe('authorization', () => {
+    it('should show the admin menu for a user with an administrative role', () => {
+      authorizationService.isAuthorized = createSpy('isAuthorized').and.callFake((featureID: FeatureID) => {
+        return observableOf(featureID === FeatureID.CanManageGroups);
+      });
+      spyOn(menuService, 'showMenu');
+      spyOn(menuService, 'hideMenu');
+
+      comp.ngOnInit();
+
+      expect(menuService.showMenu).toHaveBeenCalledWith(comp.menuID);
+      expect(menuService.hideMenu).not.toHaveBeenCalled();
+    });
+
+    it('should hide the admin menu for an authenticated non-admin user', () => {
+      authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
+      spyOn(menuService, 'showMenu');
+      spyOn(menuService, 'hideMenu');
+
+      comp.ngOnInit();
+
+      expect(menuService.showMenu).not.toHaveBeenCalled();
+      expect(menuService.hideMenu).toHaveBeenCalledWith(comp.menuID);
+    });
   });
 
   describe('startSlide', () => {

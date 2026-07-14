@@ -19,8 +19,8 @@ import {
 } from 'rxjs/operators';
 
 import { PUBLICATION_CLAIMS_PATH } from './admin/admin-notifications/admin-notifications-routing-paths';
-import { AuthService } from './core/auth/auth.service';
 import { BrowseService } from './core/browse/browse.service';
+import { canDisplayAdminPanel } from './core/data/feature-authorization/admin-panel-visibility.util';
 import { ConfigurationDataService } from './core/data/configuration-data.service';
 import { AuthorizationDataService } from './core/data/feature-authorization/authorization-data.service';
 import { FeatureID } from './core/data/feature-authorization/feature-id';
@@ -65,7 +65,6 @@ export class MenuResolverService  {
     protected modalService: NgbModal,
     protected scriptDataService: ScriptDataService,
     protected configurationDataService: ConfigurationDataService,
-    protected authService: AuthService,
   ) {
   }
 
@@ -155,8 +154,8 @@ export class MenuResolverService  {
    * Initialize all menu sections and items for {@link MenuID.ADMIN}, only if the user is logged in.
    */
   createAdminMenuIfLoggedIn$() {
-    return this.authService.isAuthenticated().pipe(
-      mergeMap((isAuthenticated) => isAuthenticated ? this.createAdminMenu$() : observableOf(true)),
+    return canDisplayAdminPanel(this.authorizationService).pipe(
+      mergeMap((canDisplayPanel) => canDisplayPanel ? this.createAdminMenu$() : observableOf(true)),
     );
   }
 
