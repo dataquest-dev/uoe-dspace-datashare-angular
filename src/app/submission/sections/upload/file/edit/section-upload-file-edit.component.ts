@@ -22,8 +22,12 @@ import {
 import { DynamicDateControlValue } from '@ng-dynamic-forms/core/lib/model/dynamic-date-control.model';
 import { DynamicFormControlCondition } from '@ng-dynamic-forms/core/lib/model/misc/dynamic-form-control-relation.model';
 import { TranslateModule } from '@ngx-translate/core';
-import { Subscription } from 'rxjs';
 import {
+  of,
+  Subscription,
+} from 'rxjs';
+import {
+  catchError,
   filter,
   mergeMap,
   take,
@@ -34,8 +38,11 @@ import { DynamicCustomSwitchModel } from 'src/app/shared/form/builder/ds-dynamic
 
 import { AccessConditionOption } from '../../../../../core/config/models/config-access-condition-option.model';
 import { SubmissionFormsModel } from '../../../../../core/config/models/config-submission-forms.model';
+import { AuthorizationDataService } from '../../../../../core/data/feature-authorization/authorization-data.service';
+import { FeatureID } from '../../../../../core/data/feature-authorization/feature-id';
 import { JsonPatchOperationPathCombiner } from '../../../../../core/json-patch/builder/json-patch-operation-path-combiner';
 import { JsonPatchOperationsBuilder } from '../../../../../core/json-patch/builder/json-patch-operations-builder';
+import { SubmitDataResponseDefinitionObject } from '../../../../../core/shared/submit-data-response-definition.model';
 import { WorkspaceitemSectionUploadFileObject } from '../../../../../core/submission/models/workspaceitem-section-upload-file.model';
 import { SubmissionJsonPatchOperationsService } from '../../../../../core/submission/submission-json-patch-operations.service';
 import { BtnDisabledDirective } from '../../../../../shared/btn-disabled.directive';
@@ -187,6 +194,11 @@ implements OnInit, OnDestroy {
   protected subscriptions: Subscription[] = [];
 
   /**
+   * Access-condition editing is allowed by default and restricted for non-admin users.
+   */
+  public canEditAccessConditions = true;
+
+  /**
    * Initialize instance variables
    *
    * @param activeModal
@@ -201,6 +213,7 @@ implements OnInit, OnDestroy {
   constructor(
     protected activeModal: NgbActiveModal,
     private cdr: ChangeDetectorRef,
+    private authorizationService: AuthorizationDataService,
     private formBuilderService: FormBuilderService,
     private formService: FormService,
     private submissionService: SubmissionService,
@@ -294,8 +307,26 @@ implements OnInit, OnDestroy {
    */
   ngOnInit() {
     if (this.fileData && this.formId) {
-      this.formModel = this.buildFileEditForm();
-      this.cdr.detectChanges();
+      const canEditAccessConditions$ = this.authorizationService.isAuthorized(FeatureID.AdministratorOf).pipe(
+        catchError(() => of(false)),
+      );
+
+      const initSubscription = canEditAccessConditions$.pipe(
+        take(1),
+      ).subscribe({
+        next: (canEdit: boolean) => {
+          this.canEditAccessConditions = canEdit;
+          this.formModel = this.buildFileEditForm();
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.canEditAccessConditions = false;
+          this.formModel = this.buildFileEditForm();
+          this.cdr.detectChanges();
+        },
+      });
+
+      this.subscriptions.push(initSubscription);
     }
   }
 
@@ -337,7 +368,7 @@ implements OnInit, OnDestroy {
     const accessConditionsArrayConfig = Object.assign({}, BITSTREAM_ACCESS_CONDITIONS_FORM_ARRAY_CONFIG);
     const accessConditionTypeOptions = [];
 
-    if (this.collectionPolicyType === POLICY_DEFAULT_WITH_LIST) {
+    if (this.collectionPolicyType === POLICY_DEFAULT_WITH_LIST && this.canEditAccessConditions) {
       for (const accessCondition of this.availableAccessConditionOptions) {
         accessConditionTypeOptions.push(
           {
@@ -455,7 +486,7 @@ implements OnInit, OnDestroy {
             this.operationsBuilder.remove(this.pathCombiner.getPath([...pathFragment, path]));
           });
         const accessConditionsToSave = [];
-        if (formData.hasOwnProperty('accessConditions')) {
+        if (this.canEditAccessConditions && formData.hasOwnProperty('accessConditions')) {
           formData.accessConditions
             .filter((accessConditions) => isNotNull(accessConditions))
             .map((accessConditions) => accessConditions.accessConditionGroup)
@@ -517,8 +548,9 @@ implements OnInit, OnDestroy {
           this.pathCombiner.rootElement,
           this.pathCombiner.subRootElement);
       }),
-    ).subscribe((result: SubmissionObject[]) => {
-      const section = result[0].sections[this.sectionId];
+    ).subscribe((result: SubmitDataResponseDefinitionObject) => {
+      const submissionObject = result[0] as SubmissionObject;
+      const section = submissionObject?.sections?.[this.sectionId];
       if (!section) {
         return;
       }
