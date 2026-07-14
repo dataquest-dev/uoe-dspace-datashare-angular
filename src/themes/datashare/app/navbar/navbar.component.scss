@@ -12,6 +12,19 @@
             padding: 1rem  0.8rem !important;
         }
     }
+
+    // DATASHARE anti-flicker (SSR -> CSR layout shift):
+    // The horizontal menu items are rendered by *ngComponentOutlet dynamic sections that do NOT
+    // render on the server, so this menu bar is ~24px in SSR (just the home icon) and ~51px once
+    // hydrated. That growth pushes the whole page down (footer / CLS) and is revealed as a visible
+    // jump when the SSR anti-flicker snapshot is removed. Reserve the hydrated row height at md+
+    // (where the menu is horizontal) so the server and client render it at the same height and
+    // nothing moves. Scoped to md+ so the collapsed mobile menu is unaffected.
+    @media (min-width: 768px) {
+        #main-navbar .navbar-nav[role="menubar"] {
+            min-height: 3.2rem; // 51.2px hydrated height (item padding 2rem + menu line-height)
+        }
+    }
 }
 
 // DATASHARE - end
