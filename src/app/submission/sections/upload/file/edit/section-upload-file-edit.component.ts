@@ -539,6 +539,8 @@ implements OnInit, OnDestroy {
       const submissionObject = result[0] as SubmissionObject;
       const section = submissionObject?.sections?.[this.sectionId];
       if (!section) {
+        this.isSaving = false;
+        this.cdr.detectChanges();
         return;
       }
       const uploadSection = (section as WorkspaceitemSectionUploadObject);
