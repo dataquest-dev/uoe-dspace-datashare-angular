@@ -190,9 +190,10 @@ implements OnInit, OnDestroy {
   protected subscriptions: Subscription[] = [];
 
   /**
-   * Access-condition editing is allowed by default and restricted for non-admin users.
+   * Whether the current user may edit bitstream access conditions.
+   * Fail-closed: stays false until the site-administrator check resolves in ngOnInit.
    */
-  public canEditAccessConditions = true;
+  public canEditAccessConditions = false;
 
   /**
    * Initialize instance variables

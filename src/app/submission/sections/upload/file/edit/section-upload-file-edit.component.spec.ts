@@ -82,7 +82,7 @@ const jsonPatchOpBuilder: any = jasmine.createSpyObj('jsonPatchOpBuilder', {
 });
 
 const authorizationServiceMock: any = jasmine.createSpyObj('authorizationService', {
-  isAuthorized: jasmine.createSpy('isAuthorized'),
+  isAuthorized: of(true),
 });
 
 const formMetadataMock = ['dc.title', 'dc.description'];
@@ -166,8 +166,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
         { provide: XSRFService, useValue: {} },
       ],
       schemas: [NO_ERRORS_SCHEMA],
-    });
-    void TestBed.compileComponents();
+    }).compileComponents().then();
   }));
 
   describe('', () => {
@@ -239,6 +238,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
     it('should init form model properly', () => {
       comp.fileData = fileData;
       comp.formId = 'testFileForm';
+      comp.canEditAccessConditions = true;
       const maxStartDate = { year: 2022, month: 1, day: 12 };
       const maxEndDate = { year: 2019, month: 7, day: 12 };
 
@@ -279,6 +279,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
 
       comp.fileData = fileData;
       comp.formId = 'testFileForm';
+      comp.canEditAccessConditions = true;
 
       comp.formModel = compAsAny.buildFileEditForm();
 
@@ -312,10 +313,28 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
       expect(compAsAny.retrieveValueFromField(field)).toBe('test');
     });
 
+    it('should show access-condition form controls for admin users', () => {
+      comp.fileData = fileData;
+      comp.formId = 'testFileForm';
+      authorizationService.isAuthorized.and.returnValue(of(true));
+      // only the form model is under test — don't render the template
+      spyOn(compAsAny.cdr, 'detectChanges');
+
+      comp.ngOnInit();
+
+      expect(comp.canEditAccessConditions).toBeTrue();
+      expect(comp.formModel).toBeDefined();
+      expect(comp.formModel.length).toBe(3);
+      expect(comp.formModel[2] instanceof DynamicFormArrayModel).toBeTrue();
+      expect(formbuilderService.findById('accessConditions', comp.formModel)).not.toBeNull();
+    });
+
     it('should hide access-condition form controls for non-admin users', () => {
       comp.fileData = fileData;
       comp.formId = 'testFileForm';
       authorizationService.isAuthorized.and.returnValue(of(false));
+      // only the form model is under test — don't render the template
+      spyOn(compAsAny.cdr, 'detectChanges');
 
       comp.ngOnInit();
 
@@ -332,6 +351,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
       compAsAny.fileData = fileData;
       compAsAny.pathCombiner = pathCombiner;
       compAsAny.isPrimary = null;
+      comp.canEditAccessConditions = true;
       formService.validateAllFormFields.and.callFake(() => null);
       formService.isValid.and.returnValue(of(true));
       formService.getFormData.and.returnValue(of(mockFileFormData));
