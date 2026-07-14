@@ -19,9 +19,10 @@ import {
 } from 'rxjs/operators';
 
 import { PUBLICATION_CLAIMS_PATH } from './admin/admin-notifications/admin-notifications-routing-paths';
+import { AuthService } from './core/auth/auth.service';
 import { BrowseService } from './core/browse/browse.service';
-import { canDisplayAdminPanel } from './core/data/feature-authorization/admin-panel-visibility.util';
 import { ConfigurationDataService } from './core/data/configuration-data.service';
+import { canDisplayAdminPanel } from './core/data/feature-authorization/admin-panel-visibility.util';
 import { AuthorizationDataService } from './core/data/feature-authorization/authorization-data.service';
 import { FeatureID } from './core/data/feature-authorization/feature-id';
 import { PaginatedList } from './core/data/paginated-list.model';
@@ -65,6 +66,7 @@ export class MenuResolverService  {
     protected modalService: NgbModal,
     protected scriptDataService: ScriptDataService,
     protected configurationDataService: ConfigurationDataService,
+    protected authService: AuthService,
   ) {
   }
 
@@ -74,7 +76,7 @@ export class MenuResolverService  {
   resolve(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): Observable<boolean> {
     return combineLatest([
       this.createPublicMenu$(),
-      this.createAdminMenuIfLoggedIn$(),
+      this.createAdminMenuIfAuthorized$(),
     ]).pipe(
       map((menusDone: boolean[]) => menusDone.every(Boolean)),
     );
@@ -151,10 +153,11 @@ export class MenuResolverService  {
   }
 
   /**
-   * Initialize all menu sections and items for {@link MenuID.ADMIN}, only if the user is logged in.
+   * Initialize all menu sections and items for {@link MenuID.ADMIN}, only if the current user
+   * holds an admin-panel role (see {@link canDisplayAdminPanel}).
    */
-  createAdminMenuIfLoggedIn$() {
-    return canDisplayAdminPanel(this.authorizationService).pipe(
+  createAdminMenuIfAuthorized$() {
+    return canDisplayAdminPanel(this.authService, this.authorizationService).pipe(
       mergeMap((canDisplayPanel) => canDisplayPanel ? this.createAdminMenu$() : observableOf(true)),
     );
   }

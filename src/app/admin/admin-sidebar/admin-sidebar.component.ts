@@ -28,6 +28,7 @@ import {
   withLatestFrom,
 } from 'rxjs/operators';
 
+import { AuthService } from '../../core/auth/auth.service';
 import { canDisplayAdminPanel } from '../../core/data/feature-authorization/admin-panel-visibility.util';
 import { AuthorizationDataService } from '../../core/data/feature-authorization/authorization-data.service';
 import { slideSidebar } from '../../shared/animations/slide';
@@ -94,6 +95,7 @@ export class AdminSidebarComponent extends MenuComponent implements OnInit {
     protected menuService: MenuService,
     protected injector: Injector,
     private variableService: CSSVariableService,
+    private authService: AuthService,
     public authorizationService: AuthorizationDataService,
     public route: ActivatedRoute,
     protected themeService: ThemeService,
@@ -107,7 +109,7 @@ export class AdminSidebarComponent extends MenuComponent implements OnInit {
    */
   ngOnInit(): void {
     super.ngOnInit();
-    canDisplayAdminPanel(this.authorizationService)
+    canDisplayAdminPanel(this.authService, this.authorizationService)
       .subscribe((canDisplayPanel: boolean) => {
         if (canDisplayPanel) {
           this.menuService.showMenu(this.menuID);

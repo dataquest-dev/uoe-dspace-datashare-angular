@@ -82,7 +82,7 @@ describe('menuResolver', () => {
         { provide: ScriptDataService, useValue: scriptService },
         { provide: ConfigurationDataService, useValue: configurationDataService },
         { provide: NgbModal, useValue: mockNgbModal },
-        { provide: AuthService, useValue: AuthServiceStub },
+        { provide: AuthService, useClass: AuthServiceStub },
         MenuResolverService,
       ],
       schemas: [NO_ERRORS_SCHEMA],
@@ -97,19 +97,19 @@ describe('menuResolver', () => {
   describe('resolve', () => {
     it('should create all menus', (done) => {
       spyOn(resolver, 'createPublicMenu$').and.returnValue(observableOf(true));
-      spyOn(resolver, 'createAdminMenuIfLoggedIn$').and.returnValue(observableOf(true));
+      spyOn(resolver, 'createAdminMenuIfAuthorized$').and.returnValue(observableOf(true));
 
       resolver.resolve(null, null).subscribe(resolved => {
         expect(resolved).toBeTrue();
         expect(resolver.createPublicMenu$).toHaveBeenCalled();
-        expect(resolver.createAdminMenuIfLoggedIn$).toHaveBeenCalled();
+        expect(resolver.createAdminMenuIfAuthorized$).toHaveBeenCalled();
         done();
       });
     });
 
     it('should return an Observable that emits true as soon as all menus are created', () => {
       spyOn(resolver, 'createPublicMenu$').and.returnValue(cold('--(t|)', BOOLEAN));
-      spyOn(resolver, 'createAdminMenuIfLoggedIn$').and.returnValue(cold('----(t|)', BOOLEAN));
+      spyOn(resolver, 'createAdminMenuIfAuthorized$').and.returnValue(cold('----(t|)', BOOLEAN));
 
       expect(resolver.resolve(null, null)).toBeObservable(cold('----(t|)', BOOLEAN));
     });
@@ -157,7 +157,7 @@ describe('menuResolver', () => {
     });
   });
 
-  describe('createAdminMenuIfLoggedIn$', () => {
+  describe('createAdminMenuIfAuthorized$', () => {
     beforeEach(() => {
       spyOn(resolver, 'createAdminMenu$').and.returnValue(observableOf(true));
     });
@@ -165,9 +165,22 @@ describe('menuResolver', () => {
     it('should not create the admin menu for an authenticated non-admin user', (done) => {
       authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
 
-      resolver.createAdminMenuIfLoggedIn$().subscribe((resolved) => {
+      resolver.createAdminMenuIfAuthorized$().subscribe((resolved) => {
         expect(resolved).toBeTrue();
         expect(resolver.createAdminMenu$).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    it('should not create the admin menu nor request authorizations for an anonymous user', (done) => {
+      const authService = TestBed.inject(AuthService);
+      spyOn(authService, 'isAuthenticated').and.returnValue(observableOf(false));
+      authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
+
+      resolver.createAdminMenuIfAuthorized$().subscribe((resolved) => {
+        expect(resolved).toBeTrue();
+        expect(resolver.createAdminMenu$).not.toHaveBeenCalled();
+        expect(authorizationService.isAuthorized).not.toHaveBeenCalled();
         done();
       });
     });
@@ -177,7 +190,7 @@ describe('menuResolver', () => {
         return observableOf(featureID === FeatureID.CanManageGroups);
       });
 
-      resolver.createAdminMenuIfLoggedIn$().subscribe((resolved) => {
+      resolver.createAdminMenuIfAuthorized$().subscribe((resolved) => {
         expect(resolved).toBeTrue();
         expect(resolver.createAdminMenu$).toHaveBeenCalled();
         done();

@@ -131,6 +131,20 @@ describe('AdminSidebarComponent', () => {
       expect(menuService.showMenu).not.toHaveBeenCalled();
       expect(menuService.hideMenu).toHaveBeenCalledWith(comp.menuID);
     });
+
+    it('should hide the admin menu without requesting authorizations for an anonymous user', () => {
+      const authService = TestBed.inject(AuthService);
+      spyOn(authService, 'isAuthenticated').and.returnValue(observableOf(false));
+      authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
+      spyOn(menuService, 'showMenu');
+      spyOn(menuService, 'hideMenu');
+
+      comp.ngOnInit();
+
+      expect(menuService.showMenu).not.toHaveBeenCalled();
+      expect(menuService.hideMenu).toHaveBeenCalledWith(comp.menuID);
+      expect(authorizationService.isAuthorized).not.toHaveBeenCalled();
+    });
   });
 
   describe('startSlide', () => {
