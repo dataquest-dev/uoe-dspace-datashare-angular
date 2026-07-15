@@ -167,7 +167,10 @@ describe('SubmissionUploadFilesComponent Component', () => {
         const expectedErrors: any = mockUploadResponse1ParsedErrors;
         fixture.detectChanges();
 
-        comp.onCompleteItem(Object.assign({}, uploadRestResponse, { sections: mockSectionsData }));
+        comp.onCompleteItem({
+          response: Object.assign({}, uploadRestResponse, { sections: mockSectionsData }),
+          fileName: 'test.pdf',
+        });
 
         Object.keys(mockSectionsData).forEach((sectionId) => {
           expect(sectionsServiceStub.updateSectionData).toHaveBeenCalledWith(
@@ -183,15 +186,43 @@ describe('SubmissionUploadFilesComponent Component', () => {
 
       });
 
+      it('should include the file name in the success notification content', () => {
+        fixture.detectChanges();
+
+        comp.onCompleteItem({
+          response: Object.assign({}, uploadRestResponse, { sections: mockSectionsData }),
+          fileName: 'test.pdf',
+        });
+
+        expect(translateService.get).toHaveBeenCalledWith(
+          'submission.sections.upload.upload-successful-file',
+          { fileName: 'test.pdf' },
+        );
+      });
+
+      it('should fall back to the generic success key when no file name is available', () => {
+        fixture.detectChanges();
+
+        comp.onCompleteItem({
+          response: Object.assign({}, uploadRestResponse, { sections: mockSectionsData }),
+          fileName: undefined,
+        });
+
+        expect(translateService.get).toHaveBeenCalledWith('submission.sections.upload.upload-successful');
+      });
+
       it('should show an error notification and call updateSectionData if unsuccessful', () => {
         const responseErrors = mockUploadResponse2Errors;
         const expectedErrors: any = mockUploadResponse2ParsedErrors;
         fixture.detectChanges();
 
-        comp.onCompleteItem(Object.assign({}, uploadRestResponse, {
-          sections: mockSectionsData,
-          errors: responseErrors.errors,
-        }));
+        comp.onCompleteItem({
+          response: Object.assign({}, uploadRestResponse, {
+            sections: mockSectionsData,
+            errors: responseErrors.errors,
+          }),
+          fileName: 'test.pdf',
+        });
 
         Object.keys(mockSectionsData).forEach((sectionId) => {
           expect(sectionsServiceStub.updateSectionData).toHaveBeenCalledWith(
@@ -205,6 +236,25 @@ describe('SubmissionUploadFilesComponent Component', () => {
 
         expect(notificationsServiceStub.success).not.toHaveBeenCalled();
 
+      });
+    });
+
+    describe('on upload error', () => {
+      it('should show an error notification including the file name when available', () => {
+        comp.onUploadError({ item: { file: { name: 'broken.zip' } } });
+
+        expect(notificationsServiceStub.error).toHaveBeenCalled();
+        expect(translateService.get).toHaveBeenCalledWith(
+          'submission.sections.upload.upload-failed-file',
+          { fileName: 'broken.zip' },
+        );
+      });
+
+      it('should fall back to the generic error key when no file name is available', () => {
+        comp.onUploadError();
+
+        expect(notificationsServiceStub.error).toHaveBeenCalled();
+        expect(translateService.get).toHaveBeenCalledWith('submission.sections.upload.upload-failed');
       });
     });
   });

@@ -26,6 +26,8 @@ import {
 } from '../../../shared/empty.util';
 import { NotificationsService } from '../../../shared/notifications/notifications.service';
 import { UploaderComponent } from '../../../shared/upload/uploader/uploader.component';
+import { UploaderCompleteEvent } from '../../../shared/upload/uploader/uploader-complete-event.model';
+import { UploaderError } from '../../../shared/upload/uploader/uploader-error.model';
 import { UploaderOptions } from '../../../shared/upload/uploader/uploader-options.model';
 import { SectionsService } from '../../sections/sections.service';
 import { SectionsType } from '../../sections/sections-type';
@@ -133,10 +135,13 @@ export class SubmissionUploadFilesComponent implements OnChanges, OnDestroy {
   /**
    * Parse the submission object retrieved from REST after upload
    *
-   * @param workspaceitem
-   *    The submission object retrieved from REST
+   * @param event
+   *    The completed upload event, carrying the submission object retrieved from REST and the
+   *    client-side name of the file that completed
    */
-  public onCompleteItem(workspaceitem: WorkspaceItem) {
+  public onCompleteItem(event: UploaderCompleteEvent) {
+    const workspaceitem = event.response as WorkspaceItem;
+    const fileName = event.fileName;
     // Checks if upload section is enabled so do upload
     this.subs.push(
       this.uploadEnabled
@@ -159,9 +164,9 @@ export class SubmissionUploadFilesComponent implements OnChanges, OnDestroy {
                       if (isUpload) {
                         // Look for errors on upload
                         if ((isEmpty(sectionErrors))) {
-                          this.notificationsService.success(null, this.translate.get('submission.sections.upload.upload-successful'));
+                          this.notificationsService.success(null, this.getNotificationContent('upload-successful', fileName));
                         } else {
-                          this.notificationsService.error(null, this.translate.get('submission.sections.upload.upload-failed'));
+                          this.notificationsService.error(null, this.getNotificationContent('upload-failed', fileName));
                         }
                       }
                     });
@@ -176,9 +181,27 @@ export class SubmissionUploadFilesComponent implements OnChanges, OnDestroy {
 
   /**
    * Show error notification on upload fails
+   *
+   * @param error
+   *    The upload error, carrying the file that failed to upload (when available)
    */
-  public onUploadError() {
-    this.notificationsService.error(null, this.translate.get('submission.sections.upload.upload-failed'));
+  public onUploadError(error?: UploaderError) {
+    this.notificationsService.error(null, this.getNotificationContent('upload-failed', error?.item?.file?.name));
+  }
+
+  /**
+   * Build the translated notification content for an upload outcome, including the file name when
+   * available. Falls back to the generic (file-name-less) message when the file name is missing.
+   *
+   * @param suffix
+   *    The i18n key suffix under `submission.sections.upload.` (e.g. `upload-successful`)
+   * @param fileName
+   *    The name of the file the notification refers to, if known
+   */
+  private getNotificationContent(suffix: string, fileName?: string): Observable<string> {
+    return isNotEmpty(fileName)
+      ? this.translate.get(`submission.sections.upload.${suffix}-file`, { fileName })
+      : this.translate.get(`submission.sections.upload.${suffix}`);
   }
 
   /**
