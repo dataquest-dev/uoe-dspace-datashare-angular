@@ -9,7 +9,7 @@ export interface UploaderCompleteEvent {
   response: any;
 
   /**
-   * The client-side name of the file that completed uploading
+   * The client-side name of the file that completed uploading, when available
    */
-  fileName: string;
+  fileName?: string;
 }
