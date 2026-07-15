@@ -536,25 +536,32 @@ implements OnInit, OnDestroy {
           this.pathCombiner.rootElement,
           this.pathCombiner.subRootElement);
       }),
-    ).subscribe((result: SubmitDataResponseDefinitionObject) => {
-      const submissionObject = result[0] as SubmissionObject;
-      const section = submissionObject?.sections?.[this.sectionId];
-      if (!section) {
+    ).subscribe({
+      next: (result: SubmitDataResponseDefinitionObject) => {
+        const submissionObject = result[0] as SubmissionObject;
+        const section = submissionObject?.sections?.[this.sectionId];
+        if (!section) {
+          this.isSaving = false;
+          this.cdr.detectChanges();
+          return;
+        }
+        const uploadSection = (section as WorkspaceitemSectionUploadObject);
+
+        this.uploadService.updateFilePrimaryBitstream(this.submissionId, this.sectionId, uploadSection.primary);
+
+        Object.keys(uploadSection.files)
+          .filter((key) => uploadSection.files[key].uuid === this.fileId)
+          .forEach((key) => this.uploadService.updateFileData(
+            this.submissionId, this.sectionId, this.fileId, uploadSection.files[key]),
+          );
+        this.isSaving = false;
+        this.activeModal.close();
+      },
+      error: () => {
+        // keep the modal usable when the PATCH request fails
         this.isSaving = false;
         this.cdr.detectChanges();
-        return;
-      }
-      const uploadSection = (section as WorkspaceitemSectionUploadObject);
-
-      this.uploadService.updateFilePrimaryBitstream(this.submissionId, this.sectionId, uploadSection.primary);
-
-      Object.keys(uploadSection.files)
-        .filter((key) => uploadSection.files[key].uuid === this.fileId)
-        .forEach((key) => this.uploadService.updateFileData(
-          this.submissionId, this.sectionId, this.fileId, uploadSection.files[key]),
-        );
-      this.isSaving = false;
-      this.activeModal.close();
+      },
     });
     this.subscriptions.push(saveBitstreamDataSubscription);
   }

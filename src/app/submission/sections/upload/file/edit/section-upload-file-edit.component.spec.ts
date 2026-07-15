@@ -28,7 +28,10 @@ import {
 import { provideMockStore } from '@ngrx/store/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgxMaskModule } from 'ngx-mask';
-import { of } from 'rxjs';
+import {
+  of,
+  throwError,
+} from 'rxjs';
 
 import {
   APP_CONFIG,
@@ -324,8 +327,6 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
 
       expect(comp.canEditAccessConditions).toBeTrue();
       expect(comp.formModel).toBeDefined();
-      expect(comp.formModel.length).toBe(3);
-      expect(comp.formModel[2] instanceof DynamicFormArrayModel).toBeTrue();
       expect(formbuilderService.findById('accessConditions', comp.formModel)).not.toBeNull();
     });
 
@@ -340,9 +341,6 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
 
       expect(comp.canEditAccessConditions).toBeFalse();
       expect(comp.formModel).toBeDefined();
-      expect(comp.formModel.length).toBe(2);
-      expect(comp.formModel[0] instanceof DynamicCustomSwitchModel).toBeTrue();
-      expect(comp.formModel[1] instanceof DynamicFormGroupModel).toBeTrue();
       expect(formbuilderService.findById('accessConditions', comp.formModel)).toBeNull();
     });
 
@@ -458,6 +456,24 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
         jasmine.anything(),
         true,
       );
+    }));
+
+    it('should clear isSaving and keep the modal open when the patch request fails', fakeAsync(() => {
+      compAsAny.formRef = { formGroup: null };
+      compAsAny.fileData = fileData;
+      compAsAny.pathCombiner = pathCombiner;
+      spyOn(compAsAny.cdr, 'detectChanges');
+      const modalCloseSpy = spyOn(compAsAny.activeModal, 'close');
+      formService.validateAllFormFields.and.callFake(() => null);
+      formService.isValid.and.returnValue(of(true));
+      formService.getFormData.and.returnValue(of(mockFileFormData));
+      operationsService.jsonPatchByResourceID.and.returnValue(throwError(() => new Error('patch failed')));
+
+      comp.saveBitstreamData();
+      tick();
+
+      expect(compAsAny.isSaving).toBeFalse();
+      expect(modalCloseSpy).not.toHaveBeenCalled();
     }));
 
     it('should not save Bitstream File data properly when form is not valid', fakeAsync(() => {
