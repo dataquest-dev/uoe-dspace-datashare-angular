@@ -35,7 +35,6 @@ import { CSSVariableServiceStub } from '../../shared/testing/css-variable-servic
 import { MenuServiceStub } from '../../shared/testing/menu-service.stub';
 import { ThemeService } from '../../shared/theme-support/theme.service';
 import { AdminSidebarComponent } from './admin-sidebar.component';
-import createSpy = jasmine.createSpy;
 
 describe('AdminSidebarComponent', () => {
   let comp: AdminSidebarComponent;
@@ -109,8 +108,8 @@ describe('AdminSidebarComponent', () => {
 
   describe('authorization', () => {
     it('should show the admin menu for a user with an administrative role', () => {
-      authorizationService.isAuthorized = createSpy('isAuthorized').and.callFake((featureID: FeatureID) => {
-        return observableOf(featureID === FeatureID.CanManageGroups);
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.callFake((featureID: FeatureID) => {
+        return observableOf(featureID === FeatureID.AdministratorOf);
       });
       spyOn(menuService, 'showMenu');
       spyOn(menuService, 'hideMenu');
@@ -122,7 +121,7 @@ describe('AdminSidebarComponent', () => {
     });
 
     it('should hide the admin menu for an authenticated non-admin user', () => {
-      authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.returnValue(observableOf(false));
       spyOn(menuService, 'showMenu');
       spyOn(menuService, 'hideMenu');
 
@@ -135,7 +134,7 @@ describe('AdminSidebarComponent', () => {
     it('should hide the admin menu without requesting authorizations for an anonymous user', () => {
       const authService = TestBed.inject(AuthService);
       spyOn(authService, 'isAuthenticated').and.returnValue(observableOf(false));
-      authorizationService.isAuthorized = createSpy('isAuthorized').and.returnValue(observableOf(false));
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.returnValue(observableOf(false));
       spyOn(menuService, 'showMenu');
       spyOn(menuService, 'hideMenu');
 

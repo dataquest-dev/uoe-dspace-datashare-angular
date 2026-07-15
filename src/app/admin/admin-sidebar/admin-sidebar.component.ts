@@ -19,18 +19,20 @@ import {
   BehaviorSubject,
   combineLatest,
   Observable,
+  of as observableOf,
 } from 'rxjs';
 import {
   debounceTime,
   distinctUntilChanged,
   first,
   map,
+  switchMap,
   withLatestFrom,
 } from 'rxjs/operators';
 
 import { AuthService } from '../../core/auth/auth.service';
-import { canDisplayAdminPanel } from '../../core/data/feature-authorization/admin-panel-visibility.util';
 import { AuthorizationDataService } from '../../core/data/feature-authorization/authorization-data.service';
+import { FeatureID } from '../../core/data/feature-authorization/feature-id';
 import { slideSidebar } from '../../shared/animations/slide';
 import { MenuComponent } from '../../shared/menu/menu.component';
 import { MenuService } from '../../shared/menu/menu.service';
@@ -109,14 +111,17 @@ export class AdminSidebarComponent extends MenuComponent implements OnInit {
    */
   ngOnInit(): void {
     super.ngOnInit();
-    canDisplayAdminPanel(this.authService, this.authorizationService)
-      .subscribe((canDisplayPanel: boolean) => {
-        if (canDisplayPanel) {
-          this.menuService.showMenu(this.menuID);
-        } else {
-          this.menuService.hideMenu(this.menuID);
-        }
-      });
+    this.authService.isAuthenticated().pipe(
+      switchMap((isAuthenticated: boolean) => isAuthenticated
+        ? this.authorizationService.isAuthorized(FeatureID.AdministratorOf)
+        : observableOf(false)),
+    ).subscribe((isSiteAdmin: boolean) => {
+      if (isSiteAdmin) {
+        this.menuService.showMenu(this.menuID);
+      } else {
+        this.menuService.hideMenu(this.menuID);
+      }
+    });
     this.menuCollapsed.pipe(first())
       .subscribe((collapsed: boolean) => {
         this.sidebarOpen = !collapsed;
