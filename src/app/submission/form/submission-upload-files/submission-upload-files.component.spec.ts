@@ -205,7 +205,6 @@ describe('SubmissionUploadFilesComponent Component', () => {
 
         comp.onCompleteItem({
           response: Object.assign({}, uploadRestResponse, { sections: mockSectionsData }),
-          fileName: undefined,
         });
 
         expect(translateService.get).toHaveBeenCalledWith('submission.sections.upload.upload-successful');

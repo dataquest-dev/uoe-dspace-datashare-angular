@@ -34,6 +34,7 @@ import {
   isUndefined,
 } from '../../empty.util';
 import { UploaderCompleteEvent } from './uploader-complete-event.model';
+import { UploaderError } from './uploader-error.model';
 import { UploaderOptions } from './uploader-options.model';
 import { UploaderProperties } from './uploader-properties.model';
 
@@ -102,7 +103,7 @@ export class UploaderComponent implements OnInit, AfterViewInit {
   /**
    * The function to call on error occurred
    */
-  @Output() onUploadError: EventEmitter<any> = new EventEmitter<any>();
+  @Output() onUploadError: EventEmitter<UploaderError> = new EventEmitter<UploaderError>();
 
   /**
    * The function to call when a file is selected
@@ -202,7 +203,8 @@ export class UploaderComponent implements OnInit, AfterViewInit {
       if (isNotEmpty(response)) {
         const responsePath = JSON.parse(response);
         this.onCompleteItem.emit(responsePath);
-        this.onCompleteItemWithFile.emit({ response: responsePath, fileName: item?.file?.name });
+        const fileName = item?.file?.name;
+        this.onCompleteItemWithFile.emit(hasValue(fileName) ? { response: responsePath, fileName } : { response: responsePath });
       }
     };
     this.uploader.onErrorItem = (item: any, response: any, status: any, headers: any) => {
