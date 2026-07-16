@@ -33,6 +33,8 @@ import {
   isNotEmpty,
   isUndefined,
 } from '../../empty.util';
+import { UploaderCompleteEvent } from './uploader-complete-event.model';
+import { UploaderError } from './uploader-error.model';
 import { UploaderOptions } from './uploader-options.model';
 import { UploaderProperties } from './uploader-properties.model';
 
@@ -93,9 +95,15 @@ export class UploaderComponent implements OnInit, AfterViewInit {
   @Output() onCompleteItem: EventEmitter<any> = new EventEmitter<any>();
 
   /**
+   * The function to call when upload is completed, carrying the parsed response together with the
+   * client-side file name. Emitted alongside {@link onCompleteItem} so existing consumers are unaffected.
+   */
+  @Output() onCompleteItemWithFile: EventEmitter<UploaderCompleteEvent> = new EventEmitter<UploaderCompleteEvent>();
+
+  /**
    * The function to call on error occurred
    */
-  @Output() onUploadError: EventEmitter<any> = new EventEmitter<any>();
+  @Output() onUploadError: EventEmitter<UploaderError> = new EventEmitter<UploaderError>();
 
   /**
    * The function to call when a file is selected
@@ -195,6 +203,8 @@ export class UploaderComponent implements OnInit, AfterViewInit {
       if (isNotEmpty(response)) {
         const responsePath = JSON.parse(response);
         this.onCompleteItem.emit(responsePath);
+        const fileName = item?.file?.name;
+        this.onCompleteItemWithFile.emit(hasValue(fileName) ? { response: responsePath, fileName } : { response: responsePath });
       }
     };
     this.uploader.onErrorItem = (item: any, response: any, status: any, headers: any) => {

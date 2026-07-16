@@ -66,6 +66,44 @@ describe('Chips component', () => {
     expect(app).toBeDefined();
   }));
 
+  it('should emit both onCompleteItem and onCompleteItemWithFile on a completed upload', inject([UploaderComponent], (app: UploaderComponent) => {
+    app.uploadFilesOptions = Object.assign(new UploaderOptions(), {
+      url: 'http://test',
+      authToken: null,
+      disableMultipart: false,
+      itemAlias: null,
+    });
+    app.ngOnInit();
+    app.ngAfterViewInit();
+
+    spyOn(app.onCompleteItem, 'emit');
+    spyOn(app.onCompleteItemWithFile, 'emit');
+
+    const parsed = { foo: 'bar' };
+    app.uploader.onCompleteItem({ file: { name: 'test.pdf' } } as any, JSON.stringify(parsed), 200, {});
+
+    expect(app.onCompleteItem.emit).toHaveBeenCalledWith(parsed);
+    expect(app.onCompleteItemWithFile.emit).toHaveBeenCalledWith({ response: parsed, fileName: 'test.pdf' });
+  }));
+
+  it('should emit onCompleteItemWithFile without a fileName when the item has no file name', inject([UploaderComponent], (app: UploaderComponent) => {
+    app.uploadFilesOptions = Object.assign(new UploaderOptions(), {
+      url: 'http://test',
+      authToken: null,
+      disableMultipart: false,
+      itemAlias: null,
+    });
+    app.ngOnInit();
+    app.ngAfterViewInit();
+
+    spyOn(app.onCompleteItemWithFile, 'emit');
+
+    const parsed = { foo: 'bar' };
+    app.uploader.onCompleteItem(undefined, JSON.stringify(parsed), 200, {});
+
+    expect(app.onCompleteItemWithFile.emit).toHaveBeenCalledWith({ response: parsed });
+  }));
+
 });
 
 // declare a test component
