@@ -112,8 +112,12 @@ export class StatisticsTableComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // Drop this table's page/rpp query params so they don't leak (via queryParamsHandling: 'merge') to the next
-    // scope's statistics page. Guarded in case the component is destroyed before ngOnInit ran.
+    // Stage this table's stats-* params for removal. Plain navigations drop query params anyway, but
+    // 'merge' navigations (e.g. the navbar search form) carry them along; PaginationService applies the
+    // staged nulls on its next updateRoute, scrubbing them from the URL. Deliberately NOT navigating from
+    // here: several tables are destroyed at once and an eager update would race the in-flight navigation.
+    // Same idiom as the other paginated components. Guarded in case the component is destroyed before
+    // ngOnInit ran.
     if (this.paginationOptions) {
       this.paginationService.clearPagination(this.paginationOptions.id);
     }
