@@ -239,8 +239,10 @@ describe('StatisticsTableComponent', () => {
     });
 
     it('should not throw when destroyed before initialisation', () => {
-      const uninitialised = TestBed.createComponent(StatisticsTableComponent).componentInstance;
-      expect(() => uninitialised.ngOnDestroy()).not.toThrow();
+      // createComponent alone runs only the constructor; destroying without detectChanges makes
+      // Angular itself invoke ngOnDestroy on a component whose ngOnInit never ran.
+      const uninitialised = TestBed.createComponent(StatisticsTableComponent);
+      expect(() => uninitialised.destroy()).not.toThrow();
     });
   });
 });
