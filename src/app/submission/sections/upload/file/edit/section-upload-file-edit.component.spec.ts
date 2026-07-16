@@ -28,16 +28,21 @@ import {
 import { provideMockStore } from '@ngrx/store/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { NgxMaskModule } from 'ngx-mask';
-import { of } from 'rxjs';
+import {
+  of,
+  throwError,
+} from 'rxjs';
 
 import {
   APP_CONFIG,
   APP_DATA_SERVICES_MAP,
 } from '../../../../../../config/app-config.interface';
 import { environment } from '../../../../../../environments/environment.test';
+import { AuthorizationDataService } from '../../../../../core/data/feature-authorization/authorization-data.service';
 import { JsonPatchOperationPathCombiner } from '../../../../../core/json-patch/builder/json-patch-operation-path-combiner';
 import { JsonPatchOperationsBuilder } from '../../../../../core/json-patch/builder/json-patch-operations-builder';
 import { SubmissionJsonPatchOperationsService } from '../../../../../core/submission/submission-json-patch-operations.service';
+import { SubmissionScopeType } from '../../../../../core/submission/submission-scope-type';
 import { XSRFService } from '../../../../../core/xsrf/xsrf.service';
 import { dateToISOFormat } from '../../../../../shared/date.util';
 import { DsDynamicTypeBindRelationService } from '../../../../../shared/form/builder/ds-dynamic-form-ui/ds-dynamic-type-bind-relation.service';
@@ -79,6 +84,10 @@ const jsonPatchOpBuilder: any = jasmine.createSpyObj('jsonPatchOpBuilder', {
   remove: jasmine.createSpy('remove'),
 });
 
+const authorizationServiceMock: any = jasmine.createSpyObj('authorizationService', {
+  isAuthorized: of(true),
+});
+
 const formMetadataMock = ['dc.title', 'dc.description'];
 
 const initialState: any = {
@@ -108,6 +117,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
   let operationsService: any;
   let formService: any;
   let uploadService: any;
+  let authorizationService: any;
 
   const submissionJsonPatchOperationsServiceStub = new SubmissionJsonPatchOperationsServiceStub();
   const submissionId = mockSubmissionId;
@@ -145,6 +155,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
         { provide: SubmissionService, useClass: SubmissionServiceStub },
         { provide: SubmissionJsonPatchOperationsService, useValue: submissionJsonPatchOperationsServiceStub },
         { provide: JsonPatchOperationsBuilder, useValue: jsonPatchOpBuilder },
+        { provide: AuthorizationDataService, useValue: authorizationServiceMock },
         { provide: SectionUploadService, useValue: getMockSectionUploadService() },
         provideMockStore({ initialState }),
         FormBuilderService,
@@ -204,6 +215,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
       operationsService = TestBed.inject(SubmissionJsonPatchOperationsService);
       formService = TestBed.inject(FormService);
       uploadService = TestBed.inject(SectionUploadService);
+      authorizationService = TestBed.inject(AuthorizationDataService);
 
       comp.submissionId = submissionId;
       comp.collectionId = collectionId;
@@ -215,6 +227,8 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
       comp.configMetadataForm = configMetadataForm;
       comp.formMetadata = formMetadataMock;
 
+      submissionServiceStub.getSubmissionScope.and.returnValue(SubmissionScopeType.WorkspaceItem);
+      authorizationService.isAuthorized.and.returnValue(of(true));
       formService.isValid.and.returnValue(of(true));
     });
 
@@ -227,6 +241,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
     it('should init form model properly', () => {
       comp.fileData = fileData;
       comp.formId = 'testFileForm';
+      comp.canEditAccessConditions = true;
       const maxStartDate = { year: 2022, month: 1, day: 12 };
       const maxEndDate = { year: 2019, month: 7, day: 12 };
 
@@ -267,6 +282,7 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
 
       comp.fileData = fileData;
       comp.formId = 'testFileForm';
+      comp.canEditAccessConditions = true;
 
       comp.formModel = compAsAny.buildFileEditForm();
 
@@ -300,11 +316,40 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
       expect(compAsAny.retrieveValueFromField(field)).toBe('test');
     });
 
+    it('should show access-condition form controls for admin users', () => {
+      comp.fileData = fileData;
+      comp.formId = 'testFileForm';
+      authorizationService.isAuthorized.and.returnValue(of(true));
+      // only the form model is under test — don't render the template
+      spyOn(compAsAny.cdr, 'detectChanges');
+
+      comp.ngOnInit();
+
+      expect(comp.canEditAccessConditions).toBeTrue();
+      expect(comp.formModel).toBeDefined();
+      expect(formbuilderService.findById('accessConditions', comp.formModel)).not.toBeNull();
+    });
+
+    it('should hide access-condition form controls for non-admin users', () => {
+      comp.fileData = fileData;
+      comp.formId = 'testFileForm';
+      authorizationService.isAuthorized.and.returnValue(of(false));
+      // only the form model is under test — don't render the template
+      spyOn(compAsAny.cdr, 'detectChanges');
+
+      comp.ngOnInit();
+
+      expect(comp.canEditAccessConditions).toBeFalse();
+      expect(comp.formModel).toBeDefined();
+      expect(formbuilderService.findById('accessConditions', comp.formModel)).toBeNull();
+    });
+
     it('should save Bitstream File data properly when form is valid', fakeAsync(() => {
       compAsAny.formRef = { formGroup: null };
       compAsAny.fileData = fileData;
       compAsAny.pathCombiner = pathCombiner;
       compAsAny.isPrimary = null;
+      comp.canEditAccessConditions = true;
       formService.validateAllFormFields.and.callFake(() => null);
       formService.isValid.and.returnValue(of(true));
       formService.getFormData.and.returnValue(of(mockFileFormData));
@@ -379,6 +424,56 @@ describe('SubmissionSectionUploadFileEditComponent test suite', () => {
       comp.saveBitstreamData();
       tick();
       expect(uploadService.updateFileData).toHaveBeenCalled();
+    }));
+
+    it('should not patch access conditions for non-admin users', fakeAsync(() => {
+      compAsAny.formRef = { formGroup: null };
+      compAsAny.fileData = fileData;
+      compAsAny.pathCombiner = pathCombiner;
+      compAsAny.canEditAccessConditions = false;
+
+      operationsBuilder.add.calls.reset();
+      formService.validateAllFormFields.and.callFake(() => null);
+      formService.isValid.and.returnValue(of(true));
+      formService.getFormData.and.returnValue(of(mockFileFormData));
+
+      const response = [
+        Object.assign(mockSubmissionObject, {
+          sections: {
+            upload: {
+              files: mockUploadFiles,
+            },
+          },
+        }),
+      ];
+      operationsService.jsonPatchByResourceID.and.returnValue(of(response));
+
+      comp.saveBitstreamData();
+      tick();
+
+      expect(operationsBuilder.add).not.toHaveBeenCalledWith(
+        pathCombiner.getPath(['files', fileIndex, 'accessConditions']),
+        jasmine.anything(),
+        true,
+      );
+    }));
+
+    it('should clear isSaving and keep the modal open when the patch request fails', fakeAsync(() => {
+      compAsAny.formRef = { formGroup: null };
+      compAsAny.fileData = fileData;
+      compAsAny.pathCombiner = pathCombiner;
+      spyOn(compAsAny.cdr, 'detectChanges');
+      const modalCloseSpy = spyOn(compAsAny.activeModal, 'close');
+      formService.validateAllFormFields.and.callFake(() => null);
+      formService.isValid.and.returnValue(of(true));
+      formService.getFormData.and.returnValue(of(mockFileFormData));
+      operationsService.jsonPatchByResourceID.and.returnValue(throwError(() => new Error('patch failed')));
+
+      comp.saveBitstreamData();
+      tick();
+
+      expect(compAsAny.isSaving).toBeFalse();
+      expect(modalCloseSpy).not.toHaveBeenCalled();
     }));
 
     it('should not save Bitstream File data properly when form is not valid', fakeAsync(() => {
