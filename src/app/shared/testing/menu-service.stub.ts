@@ -36,10 +36,10 @@ export class MenuServiceStub {
   collapseMenu(): void { /***/
   }
 
-  showMenu(): void { /***/
+  showMenu(menuID?: MenuID): void { /***/
   }
 
-  hideMenu(): void { /***/
+  hideMenu(menuID?: MenuID): void { /***/
   }
 
   expandMenuPreview(): void { /***/

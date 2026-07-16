@@ -19,10 +19,14 @@ import {
   NgbModalRef,
 } from '@ng-bootstrap/ng-bootstrap';
 import { TranslateModule } from '@ngx-translate/core';
-import { of as observableOf } from 'rxjs';
+import {
+  BehaviorSubject,
+  of as observableOf,
+} from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthorizationDataService } from '../../core/data/feature-authorization/authorization-data.service';
+import { FeatureID } from '../../core/data/feature-authorization/feature-id';
 import { ScriptDataService } from '../../core/data/processes/script-data.service';
 import { Item } from '../../core/shared/item.model';
 import { MenuService } from '../../shared/menu/menu.service';
@@ -103,6 +107,70 @@ describe('AdminSidebarComponent', () => {
     comp = fixture.componentInstance; // SearchPageComponent test instance
     comp.sections = observableOf([]);
     fixture.detectChanges();
+  });
+
+  describe('authorization', () => {
+    /**
+     * Re-create the component so that its single ngOnInit runs under the stubs/spies configured by the
+     * test, instead of the default detectChanges() from the outer beforeEach (which runs before them).
+     */
+    const initFreshComponent = () => {
+      fixture = TestBed.createComponent(AdminSidebarComponent);
+      comp = fixture.componentInstance;
+      comp.sections = observableOf([]);
+      fixture.detectChanges();
+    };
+
+    beforeEach(() => {
+      spyOn(menuService, 'showMenu');
+      spyOn(menuService, 'hideMenu');
+    });
+
+    it('should show the admin menu for a user with an administrative role', () => {
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.callFake((featureID: FeatureID) => {
+        return observableOf(featureID === FeatureID.AdministratorOf);
+      });
+
+      initFreshComponent();
+
+      expect(menuService.showMenu).toHaveBeenCalledWith(comp.menuID);
+      expect(menuService.hideMenu).not.toHaveBeenCalled();
+    });
+
+    it('should hide the admin menu for an authenticated non-admin user', () => {
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.returnValue(observableOf(false));
+
+      initFreshComponent();
+
+      expect(menuService.showMenu).not.toHaveBeenCalled();
+      expect(menuService.hideMenu).toHaveBeenCalledWith(comp.menuID);
+    });
+
+    it('should hide the admin menu without requesting authorizations for an anonymous user', () => {
+      spyOn(TestBed.inject(AuthService), 'isAuthenticated').and.returnValue(observableOf(false));
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.returnValue(observableOf(false));
+
+      initFreshComponent();
+
+      expect(menuService.showMenu).not.toHaveBeenCalled();
+      expect(menuService.hideMenu).toHaveBeenCalledWith(comp.menuID);
+      expect(authorizationService.isAuthorized).not.toHaveBeenCalled();
+    });
+
+    it('should reveal the admin menu once authentication resolves (guards against a one-shot take(1) regression)', () => {
+      const authenticated$ = new BehaviorSubject<boolean>(false);
+      spyOn(TestBed.inject(AuthService), 'isAuthenticated').and.returnValue(authenticated$);
+      authorizationService.isAuthorized = jasmine.createSpy('isAuthorized').and.callFake((featureID: FeatureID) => {
+        return observableOf(featureID === FeatureID.AdministratorOf);
+      });
+
+      initFreshComponent();
+      expect(menuService.hideMenu).toHaveBeenCalledWith(comp.menuID);
+
+      authenticated$.next(true);
+
+      expect(menuService.showMenu).toHaveBeenCalledWith(comp.menuID);
+    });
   });
 
   describe('startSlide', () => {
