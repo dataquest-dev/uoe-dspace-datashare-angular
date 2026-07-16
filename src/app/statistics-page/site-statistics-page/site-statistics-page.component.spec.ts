@@ -84,7 +84,7 @@ describe('SiteStatisticsPageComponent', () => {
         { provide: DSONameService, useValue: nameService },
         { provide: SiteDataService, useValue: siteService },
         { provide: AuthService, useValue: authService },
-        { provide: PaginationService, useValue: { getCurrentPagination: () => observableOf({ currentPage: 1, pageSize: 10 }) } },
+        { provide: PaginationService, useValue: { getCurrentPagination: () => observableOf({ currentPage: 1, pageSize: 10 }), clearPagination: () => undefined } },
       ],
     })
       .compileComponents();

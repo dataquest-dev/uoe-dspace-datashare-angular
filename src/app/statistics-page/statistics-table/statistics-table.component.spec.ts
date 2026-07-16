@@ -47,6 +47,7 @@ describe('StatisticsTableComponent', () => {
 
   const paginationService = {
     getCurrentPagination: (_id: string, _options: PaginationComponentOptions) => currentPagination$.asObservable(),
+    clearPagination: (_id: string) => undefined,
   };
 
   const setPage = (currentPage: number, pageSize = 10) => {
@@ -219,6 +220,27 @@ describe('StatisticsTableComponent', () => {
       expect(de.queryAll(By.css('[data-test="statistics-label"]')).length)
         .toEqual(remaining);
       expect(de.query(By.css(`td.item_${numberOfPoints - 1}-views-data`))).toBeTruthy();
+    });
+  });
+
+  describe('on destroy', () => {
+
+    it('should clear its own pagination params so they do not leak to the next scope', () => {
+      component.report = Object.assign(new UsageReport(), {
+        id: 'uuid_TotalVisits',
+        points: [],
+      });
+      component.ngOnInit();
+      const spy = spyOn(paginationService, 'clearPagination');
+
+      fixture.destroy();
+
+      expect(spy).toHaveBeenCalledWith('stats-uuid_TotalVisits');
+    });
+
+    it('should not throw when destroyed before initialisation', () => {
+      const uninitialised = TestBed.createComponent(StatisticsTableComponent).componentInstance;
+      expect(() => uninitialised.ngOnDestroy()).not.toThrow();
     });
   });
 });

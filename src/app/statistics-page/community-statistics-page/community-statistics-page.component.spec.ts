@@ -83,7 +83,7 @@ describe('CommunityStatisticsPageComponent', () => {
         { provide: DSpaceObjectDataService, useValue: {} },
         { provide: DSONameService, useValue: nameService },
         { provide: AuthService, useValue: authService },
-        { provide: PaginationService, useValue: { getCurrentPagination: () => observableOf({ currentPage: 1, pageSize: 10 }) } },
+        { provide: PaginationService, useValue: { getCurrentPagination: () => observableOf({ currentPage: 1, pageSize: 10 }), clearPagination: () => undefined } },
       ],
     })
       .compileComponents();

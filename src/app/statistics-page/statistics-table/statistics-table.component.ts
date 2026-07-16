@@ -6,6 +6,7 @@ import {
 import {
   Component,
   Input,
+  OnDestroy,
   OnInit,
 } from '@angular/core';
 import {
@@ -43,7 +44,7 @@ import { PaginationComponentOptions } from '../../shared/pagination/pagination-c
   standalone: true,
   imports: [NgIf, NgFor, AsyncPipe, TranslateModule, PaginationComponent],
 })
-export class StatisticsTableComponent implements OnInit {
+export class StatisticsTableComponent implements OnInit, OnDestroy {
 
   /**
    * The usage report to display a statistics table for
@@ -108,6 +109,14 @@ export class StatisticsTableComponent implements OnInit {
         return this.report.points.slice(start, start + pagination.pageSize);
       }),
     );
+  }
+
+  ngOnDestroy() {
+    // Drop this table's page/rpp query params so they don't leak (via queryParamsHandling: 'merge') to the next
+    // scope's statistics page. Guarded in case the component is destroyed before ngOnInit ran.
+    if (this.paginationOptions) {
+      this.paginationService.clearPagination(this.paginationOptions.id);
+    }
   }
 
   /**
