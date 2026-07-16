@@ -13,6 +13,7 @@ import {
 import {
   FormsModule,
   ReactiveFormsModule,
+  UntypedFormControl,
 } from '@angular/forms';
 import {
   DynamicFormControlEvent,
@@ -33,8 +34,10 @@ import { JsonPatchOperationPathCombiner } from '../../../core/json-patch/builder
 import { WorkflowItem } from '../../../core/submission/models/workflowitem.model';
 import { WorkspaceItem } from '../../../core/submission/models/workspaceitem.model';
 import { SubmissionObjectDataService } from '../../../core/submission/submission-object-data.service';
+import { VocabularyOptions } from '../../../core/submission/vocabularies/models/vocabulary-options.model';
 import { DsDynamicInputModel } from '../../../shared/form/builder/ds-dynamic-form-ui/models/ds-dynamic-input.model';
 import { DynamicRowGroupModel } from '../../../shared/form/builder/ds-dynamic-form-ui/models/ds-dynamic-row-group-model';
+import { DynamicScrollableDropdownModel } from '../../../shared/form/builder/ds-dynamic-form-ui/models/scrollable-dropdown/dynamic-scrollable-dropdown.model';
 import { FormBuilderService } from '../../../shared/form/builder/form-builder.service';
 import { FormFieldModel } from '../../../shared/form/builder/models/form-field.model';
 import { FormFieldMetadataValueObject } from '../../../shared/form/builder/models/form-field-metadata-value.model';
@@ -606,6 +609,72 @@ describe('SubmissionSectionFormComponent test suite', () => {
       expect(formOperationsService.getFieldValueFromChangeEvent).toHaveBeenCalledWith(dynamicFormControlEvent);
       expect(submissionServiceStub.dispatchSave).toHaveBeenCalledWith(submissionId);
 
+    });
+
+    describe('duplicate values in repeatable dropdown fields', () => {
+      let dropdownEvent: DynamicFormControlEvent;
+
+      beforeEach(() => {
+        const dropdownModel = new DynamicScrollableDropdownModel({
+          id: 'dc_contributor_other',
+          name: 'dc.contributor.other',
+          vocabularyOptions: new VocabularyOptions('funding_bodies'),
+          repeatable: true,
+          metadataFields: [],
+          submissionId: '1234',
+          hasSelectableMetadata: false,
+        });
+        dropdownEvent = {
+          $event: new Event('change'),
+          context: null,
+          control: new UntypedFormControl('Wellcome Trust') as any,
+          group: testFormModel[0] as any,
+          model: dropdownModel as any,
+          type: DynamicFormControlEventType.Change,
+        };
+        formOperationsService.getFieldPathSegmentedFromChangeEvent.and.returnValue('dc.contributor.other');
+        formOperationsService.getFieldValueFromChangeEvent.and.returnValue(new FormFieldMetadataValueObject('Wellcome Trust'));
+      });
+
+      it('should block the change and notify when the value already exists in the same field', () => {
+        compAsAny.formData = {
+          'dc.contributor.other': [new FormFieldMetadataValueObject('Wellcome Trust'), new FormFieldMetadataValueObject('Wellcome Trust')],
+        };
+        compAsAny.previousValue.path = ['test', 'path'];
+        compAsAny.previousValue.value = 'previous';
+
+        comp.onChange(dropdownEvent);
+
+        expect(formOperationsService.dispatchOperationsFromEvent).not.toHaveBeenCalled();
+        expect(submissionServiceStub.dispatchSave).not.toHaveBeenCalled();
+        expect(notificationsServiceStub.warning).toHaveBeenCalled();
+        expect(dropdownEvent.control.value).toBe('previous');
+        expect(formService.changeForm).toHaveBeenCalled();
+      });
+
+      it('should dispatch operations when the value occurs only once', () => {
+        spyOn(comp, 'hasStoredValue').and.returnValue(false);
+        compAsAny.formData = {
+          'dc.contributor.other': [new FormFieldMetadataValueObject('Wellcome Trust')],
+        };
+
+        comp.onChange(dropdownEvent);
+
+        expect(formOperationsService.dispatchOperationsFromEvent).toHaveBeenCalled();
+        expect(notificationsServiceStub.warning).not.toHaveBeenCalled();
+      });
+
+      it('should not block non-dropdown models even when form data contains duplicates', () => {
+        spyOn(comp, 'hasStoredValue').and.returnValue(false);
+        compAsAny.formData = {
+          'dc.contributor.other': [new FormFieldMetadataValueObject('Wellcome Trust'), new FormFieldMetadataValueObject('Wellcome Trust')],
+        };
+
+        comp.onChange(dynamicFormControlEvent);
+
+        expect(formOperationsService.dispatchOperationsFromEvent).toHaveBeenCalled();
+        expect(notificationsServiceStub.warning).not.toHaveBeenCalled();
+      });
     });
 
     it('should set previousValue on form focus event', () => {
