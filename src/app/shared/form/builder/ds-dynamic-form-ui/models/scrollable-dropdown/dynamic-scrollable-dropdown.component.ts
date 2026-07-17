@@ -281,7 +281,7 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
       if (sdRef.isOpen()) {
         this.selectEntry(this.optionsList[this.selectedIndex], sdRef);
       } else {
-        sdRef.open();
+        this.openDropdown(sdRef);
       }
     } else if (keyName === 'ArrowDown' || keyName === 'ArrowUp') {
       event.preventDefault();

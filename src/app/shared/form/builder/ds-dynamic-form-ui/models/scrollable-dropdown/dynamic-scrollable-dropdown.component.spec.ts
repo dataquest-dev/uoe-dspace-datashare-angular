@@ -281,6 +281,17 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
         expect(sdRef.close).not.toHaveBeenCalled();
       });
 
+      it('should refresh used sibling values when opened via keyboard', () => {
+        spyOn(scrollableDropdownComp, 'openDropdown');
+        const sdRef = jasmine.createSpyObj('NgbDropdown', ['isOpen', 'open', 'close']);
+        sdRef.isOpen.and.returnValue(false);
+
+        scrollableDropdownComp.selectOnKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }), sdRef);
+
+        expect(scrollableDropdownComp.openDropdown).toHaveBeenCalledWith(sdRef);
+        expect(sdRef.open).not.toHaveBeenCalled();
+      });
+
       it('should still allow clearing the value', () => {
         scrollableDropdownComp.usedSiblingValues = new Set([1]);
         spyOn(scrollableDropdownComp.change, 'emit');
