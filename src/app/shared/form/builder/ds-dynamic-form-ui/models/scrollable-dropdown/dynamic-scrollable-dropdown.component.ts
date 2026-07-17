@@ -21,6 +21,7 @@ import {
   NgbDropdownModule,
 } from '@ng-bootstrap/ng-bootstrap';
 import {
+  DynamicFormArrayGroupModel,
   DynamicFormLayoutService,
   DynamicFormValidationService,
 } from '@ng-dynamic-forms/core';
@@ -33,7 +34,6 @@ import {
 } from 'rxjs';
 import {
   catchError,
-  distinctUntilChanged,
   finalize,
   map,
   take,
@@ -59,6 +59,7 @@ import { BtnDisabledDirective } from '../../../../../btn-disabled.directive';
 import {
   hasValue,
   isEmpty,
+  isNotEmpty,
 } from '../../../../../empty.util';
 import { FormFieldMetadataValueObject } from '../../../models/form-field-metadata-value.model';
 import { DsDynamicVocabularyComponent } from '../dynamic-vocabulary.component';
@@ -101,6 +102,8 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
   public selectedIndex = 0;
   public acceptableKeys = ['Space', 'NumpadMultiply', 'NumpadAdd', 'NumpadSubtract', 'NumpadDecimal', 'Semicolon', 'Equal', 'Comma', 'Minus', 'Period', 'Quote', 'Backquote'];
 
+  public usedSiblingValues: Set<any> = new Set();
+
   /**
    * If true the component can rely on the findAll method for data loading.
    * This is a behaviour activated by dependency injection through the dropdown config.
@@ -142,7 +145,9 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
     });
 
 
-    this.group.get(this.model.id).valueChanges.pipe(distinctUntilChanged())
+    // No distinctUntilChanged: the duplicate-value guard may revert the control to its
+    // previous object reference, and the displayed value must still refresh.
+    this.group.get(this.model.id).valueChanges
       .subscribe((value) => {
         this.setCurrentValue(value);
       });
@@ -205,10 +210,44 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
     if (!this.model.readOnly) {
       this.group.markAsUntouched();
       this.inputText = null;
+      this.usedSiblingValues = this.getUsedSiblingValues();
       this.updatePageInfo(this.model.maxOptions, 1);
       this.loadOptions(false);
       sdRef.open();
     }
+  }
+
+  private getUsedSiblingValues(): Set<any> {
+    const used = new Set<any>();
+    const parent = this.model.parent;
+    if (parent instanceof DynamicFormArrayGroupModel) {
+      parent.context.groups
+        .filter((rowGroup) => rowGroup !== parent)
+        .forEach((rowGroup) => {
+          rowGroup.group
+            .filter((siblingModel) => siblingModel.name === this.model.name)
+            .forEach((siblingModel) => {
+              const value = (siblingModel as any).value;
+              const canonical = typeof value === 'string' ? value : value?.value;
+              if (isNotEmpty(canonical)) {
+                used.add(canonical);
+              }
+            });
+        });
+    }
+    return used;
+  }
+
+  isOptionDisabled(entry: any): boolean {
+    return hasValue(entry) && this.usedSiblingValues.has(entry.value);
+  }
+
+  selectEntry(entry: any, sdRef: NgbDropdown) {
+    if (this.isOptionDisabled(entry)) {
+      return;
+    }
+    this.onSelect(entry);
+    sdRef.close();
   }
 
   navigateDropdown(event: KeyboardEvent) {
@@ -240,8 +279,7 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
       event.preventDefault();
       event.stopPropagation();
       if (sdRef.isOpen()) {
-        this.onSelect(this.optionsList[this.selectedIndex]);
-        sdRef.close();
+        this.selectEntry(this.optionsList[this.selectedIndex], sdRef);
       } else {
         sdRef.open();
       }
@@ -330,9 +368,15 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
    * @param event The value to emit.
    */
   onSelect(event) {
+    if (this.isOptionDisabled(event)) {
+      return;
+    }
     this.group.markAsDirty();
-    this.dispatchUpdate(event);
+    // setCurrentValue before dispatchUpdate: the change is handled synchronously and the
+    // duplicate-value guard may revert the control, so dispatching first would leave the
+    // rejected value on screen.
     this.setCurrentValue(event);
+    this.dispatchUpdate(event);
   }
 
   /**

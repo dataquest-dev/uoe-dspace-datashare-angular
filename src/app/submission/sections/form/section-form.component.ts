@@ -498,6 +498,8 @@ export class SubmissionSectionFormComponent extends SectionModelComponent {
     const previous = this.previousValue.isPathEqual(this.formBuilderService.getPath(event.model))
       ? this.previousValue.value : null;
     event.control.setValue(previous);
+    // changeForm rebuilds the store from the model, so revert model.value too.
+    (event.model as any).value = previous;
     event.control.markAsPristine();
     this.previousValue.delete();
     this.formService.changeForm(this.formId, this.formModel);

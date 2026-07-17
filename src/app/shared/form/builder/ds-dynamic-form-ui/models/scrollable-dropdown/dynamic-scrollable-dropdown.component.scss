@@ -10,6 +10,11 @@
   border-bottom: var(--bs-dropdown-border-width) solid var(--bs-dropdown-border-color);
 }
 
+.collection-item.disabled {
+  background-color: var(--bs-gray-200);
+  color: var(--bs-dropdown-link-disabled-color);
+}
+
 .scrollable-dropdown-loading {
   background-color: var(--bs-primary);
   color: white;

@@ -649,6 +649,7 @@ describe('SubmissionSectionFormComponent test suite', () => {
         expect(submissionServiceStub.dispatchSave).not.toHaveBeenCalled();
         expect(notificationsServiceStub.warning).toHaveBeenCalled();
         expect(dropdownEvent.control.value).toBe('previous');
+        expect((dropdownEvent.model as any).value).toBe('previous');
         expect(formService.changeForm).toHaveBeenCalled();
       });
 
