@@ -6,6 +6,7 @@ import {
 import {
   Component,
   Input,
+  OnDestroy,
   OnInit,
 } from '@angular/core';
 import {
@@ -43,7 +44,7 @@ import { PaginationComponentOptions } from '../../shared/pagination/pagination-c
   standalone: true,
   imports: [NgIf, NgFor, AsyncPipe, TranslateModule, PaginationComponent],
 })
-export class StatisticsTableComponent implements OnInit {
+export class StatisticsTableComponent implements OnInit, OnDestroy {
 
   /**
    * The usage report to display a statistics table for
@@ -108,6 +109,18 @@ export class StatisticsTableComponent implements OnInit {
         return this.report.points.slice(start, start + pagination.pageSize);
       }),
     );
+  }
+
+  ngOnDestroy() {
+    // Stage this table's stats-* params for removal. Plain navigations drop query params anyway, but
+    // 'merge' navigations (e.g. the navbar search form) carry them along; PaginationService applies the
+    // staged nulls on its next updateRoute, scrubbing them from the URL. Deliberately NOT navigating from
+    // here: several tables are destroyed at once and an eager update would race the in-flight navigation.
+    // Same idiom as the other paginated components. Guarded in case the component is destroyed before
+    // ngOnInit ran.
+    if (this.paginationOptions) {
+      this.paginationService.clearPagination(this.paginationOptions.id);
+    }
   }
 
   /**
