@@ -22,6 +22,7 @@ import {
 import { By } from '@angular/platform-browser';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import {
+  DynamicFormArrayModel,
   DynamicFormLayoutService,
   DynamicFormsCoreModule,
   DynamicFormValidationService,
@@ -211,6 +212,102 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
         spyOn(scrollableDropdownComp.focus, 'emit');
         scrollableDropdownComp.onFocus(new Event('focus'));
         expect(scrollableDropdownComp.focus.emit).toHaveBeenCalled();
+      });
+
+    });
+
+    describe('duplicate values in repeatable fields', () => {
+      beforeEach(() => {
+        scrollableDropdownFixture = TestBed.createComponent(DsDynamicScrollableDropdownComponent);
+        scrollableDropdownComp = scrollableDropdownFixture.componentInstance;
+        scrollableDropdownComp.group = SD_TEST_GROUP;
+
+        const arrayModel = new DynamicFormArrayModel({
+          id: 'dropdownArray',
+          groupFactory: () => [new DynamicScrollableDropdownModel(SD_TEST_MODEL_CONFIG)],
+          initialCount: 2,
+        });
+        const ownGroup = arrayModel.get(0);
+        const siblingGroup = arrayModel.get(1);
+        (siblingGroup.group[0] as any).value = Object.assign(new VocabularyEntry(), { authority: 1, display: 'one', value: 1 });
+
+        const ownModel = ownGroup.group[0] as DynamicScrollableDropdownModel;
+        (ownModel as any).parent = ownGroup;
+        scrollableDropdownComp.model = ownModel;
+        scrollableDropdownFixture.detectChanges();
+      });
+
+      afterEach(() => {
+        scrollableDropdownFixture.destroy();
+        scrollableDropdownComp = null;
+      });
+
+      it('should disable an option already selected in another row of the same field', () => {
+        const de = scrollableDropdownFixture.debugElement.query(By.css('input.form-control'));
+        de.nativeElement.dispatchEvent(new MouseEvent('mousedown'));
+        de.nativeElement.click();
+        scrollableDropdownFixture.detectChanges();
+
+        expect(scrollableDropdownComp.usedSiblingValues.has(1)).toBeTruthy();
+        expect(scrollableDropdownComp.isOptionDisabled({ value: 1 })).toBeTruthy();
+        expect(scrollableDropdownComp.isOptionDisabled({ value: 2 })).toBeFalsy();
+
+        const options = scrollableDropdownFixture.debugElement.queryAll(By.css('button.dropdown-item.collection-item'));
+        expect(hasClass(options[1].nativeElement, 'disabled')).toBeTruthy();
+        expect(hasClass(options[2].nativeElement, 'disabled')).toBeFalsy();
+      });
+
+      it('should ignore selection of a disabled option', () => {
+        scrollableDropdownComp.usedSiblingValues = new Set([1]);
+        spyOn(scrollableDropdownComp.change, 'emit');
+
+        scrollableDropdownComp.onSelect(Object.assign(new VocabularyEntry(), { authority: 1, display: 'one', value: 1 }));
+
+        expect(scrollableDropdownComp.change.emit).not.toHaveBeenCalled();
+        expect((scrollableDropdownComp.model as any).value).toBeUndefined();
+      });
+
+      it('should not select a disabled option via keyboard and keep the dropdown open', () => {
+        scrollableDropdownComp.usedSiblingValues = new Set([1]);
+        scrollableDropdownComp.optionsList = [Object.assign(new VocabularyEntry(), { authority: 1, display: 'one', value: 1 })];
+        scrollableDropdownComp.selectedIndex = 0;
+        spyOn(scrollableDropdownComp.change, 'emit');
+        const sdRef = jasmine.createSpyObj('NgbDropdown', ['isOpen', 'open', 'close']);
+        sdRef.isOpen.and.returnValue(true);
+
+        scrollableDropdownComp.selectOnKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }), sdRef);
+
+        expect(scrollableDropdownComp.change.emit).not.toHaveBeenCalled();
+        expect(sdRef.close).not.toHaveBeenCalled();
+      });
+
+      it('should refresh used sibling values when opened via keyboard', () => {
+        spyOn(scrollableDropdownComp, 'openDropdown');
+        const sdRef = jasmine.createSpyObj('NgbDropdown', ['isOpen', 'open', 'close']);
+        sdRef.isOpen.and.returnValue(false);
+
+        scrollableDropdownComp.selectOnKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }), sdRef);
+
+        expect(scrollableDropdownComp.openDropdown).toHaveBeenCalledWith(sdRef);
+        expect(sdRef.open).not.toHaveBeenCalled();
+      });
+
+      it('should still allow clearing the value', () => {
+        scrollableDropdownComp.usedSiblingValues = new Set([1]);
+        spyOn(scrollableDropdownComp.change, 'emit');
+
+        scrollableDropdownComp.onSelect(undefined);
+
+        expect(scrollableDropdownComp.change.emit).toHaveBeenCalled();
+      });
+
+      it('should not disable any option for a field without repeatable siblings', () => {
+        scrollableDropdownComp.model = new DynamicScrollableDropdownModel(SD_TEST_MODEL_CONFIG);
+
+        scrollableDropdownComp.openDropdown({ open: () => undefined } as any);
+
+        expect(scrollableDropdownComp.usedSiblingValues.size).toBe(0);
+        expect(scrollableDropdownComp.isOptionDisabled({ value: 1 })).toBeFalsy();
       });
 
     });

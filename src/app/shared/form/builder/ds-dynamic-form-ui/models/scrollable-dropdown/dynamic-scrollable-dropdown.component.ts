@@ -21,6 +21,7 @@ import {
   NgbDropdownModule,
 } from '@ng-bootstrap/ng-bootstrap';
 import {
+  DynamicFormArrayGroupModel,
   DynamicFormLayoutService,
   DynamicFormValidationService,
 } from '@ng-dynamic-forms/core';
@@ -59,6 +60,7 @@ import { BtnDisabledDirective } from '../../../../../btn-disabled.directive';
 import {
   hasValue,
   isEmpty,
+  isNotEmpty,
 } from '../../../../../empty.util';
 import { FormFieldMetadataValueObject } from '../../../models/form-field-metadata-value.model';
 import { DsDynamicVocabularyComponent } from '../dynamic-vocabulary.component';
@@ -100,6 +102,8 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
   public inputText: string = null;
   public selectedIndex = 0;
   public acceptableKeys = ['Space', 'NumpadMultiply', 'NumpadAdd', 'NumpadSubtract', 'NumpadDecimal', 'Semicolon', 'Equal', 'Comma', 'Minus', 'Period', 'Quote', 'Backquote'];
+
+  public usedSiblingValues: Set<any> = new Set();
 
   /**
    * If true the component can rely on the findAll method for data loading.
@@ -205,10 +209,44 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
     if (!this.model.readOnly) {
       this.group.markAsUntouched();
       this.inputText = null;
+      this.usedSiblingValues = this.getUsedSiblingValues();
       this.updatePageInfo(this.model.maxOptions, 1);
       this.loadOptions(false);
       sdRef.open();
     }
+  }
+
+  private getUsedSiblingValues(): Set<any> {
+    const used = new Set<any>();
+    const parent = this.model.parent;
+    if (parent instanceof DynamicFormArrayGroupModel) {
+      parent.context.groups
+        .filter((rowGroup) => rowGroup !== parent)
+        .forEach((rowGroup) => {
+          rowGroup.group
+            .filter((siblingModel) => siblingModel.name === this.model.name)
+            .forEach((siblingModel) => {
+              const value = (siblingModel as any).value;
+              const canonical = typeof value === 'string' ? value : value?.value;
+              if (isNotEmpty(canonical)) {
+                used.add(canonical);
+              }
+            });
+        });
+    }
+    return used;
+  }
+
+  isOptionDisabled(entry: any): boolean {
+    return hasValue(entry) && this.usedSiblingValues.has(entry.value);
+  }
+
+  selectEntry(entry: any, sdRef: NgbDropdown) {
+    if (this.isOptionDisabled(entry)) {
+      return;
+    }
+    this.onSelect(entry);
+    sdRef.close();
   }
 
   navigateDropdown(event: KeyboardEvent) {
@@ -240,10 +278,9 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
       event.preventDefault();
       event.stopPropagation();
       if (sdRef.isOpen()) {
-        this.onSelect(this.optionsList[this.selectedIndex]);
-        sdRef.close();
+        this.selectEntry(this.optionsList[this.selectedIndex], sdRef);
       } else {
-        sdRef.open();
+        this.openDropdown(sdRef);
       }
     } else if (keyName === 'ArrowDown' || keyName === 'ArrowUp') {
       event.preventDefault();
@@ -330,6 +367,9 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
    * @param event The value to emit.
    */
   onSelect(event) {
+    if (this.isOptionDisabled(event)) {
+      return;
+    }
     this.group.markAsDirty();
     this.dispatchUpdate(event);
     this.setCurrentValue(event);
