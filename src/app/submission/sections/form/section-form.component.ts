@@ -56,7 +56,6 @@ import {
   isNotEmpty,
   isUndefined,
 } from '../../../shared/empty.util';
-import { DynamicScrollableDropdownModel } from '../../../shared/form/builder/ds-dynamic-form-ui/models/scrollable-dropdown/dynamic-scrollable-dropdown.model';
 import { FormBuilderService } from '../../../shared/form/builder/form-builder.service';
 import { FormFieldPreviousValueObject } from '../../../shared/form/builder/models/form-field-previous-value-object';
 import { FormComponent } from '../../../shared/form/form.component';
@@ -445,10 +444,6 @@ export class SubmissionSectionFormComponent extends SectionModelComponent {
    *    the [[DynamicFormControlEvent]] emitted
    */
   onChange(event: DynamicFormControlEvent): void {
-    if (this.isDuplicateVocabularyEntry(event)) {
-      this.revertDuplicateVocabularyEntry(event);
-      return;
-    }
     this.formOperationsService.dispatchOperationsFromEvent(
       this.pathCombiner,
       event,
@@ -460,50 +455,6 @@ export class SubmissionSectionFormComponent extends SectionModelComponent {
     if ((environment.submission.autosave.metadata.indexOf(metadata) !== -1 && isNotEmpty(value)) || this.hasRelatedCustomError(metadata)) {
       this.submissionService.dispatchSave(this.submissionId);
     }
-  }
-
-  /**
-   * Check whether the value just selected in a scrollable dropdown already exists
-   * at another index of the same metadata field, to prevent duplicate values in
-   * repeatable dropdown fields (e.g. the Funder dropdown).
-   *
-   * Note: when this runs the form store already contains the new selection, so a
-   * duplicate is detected when the value occurs more than once in the form data.
-   *
-   * @param event
-   *    the [[DynamicFormControlEvent]] emitted
-   */
-  private isDuplicateVocabularyEntry(event: DynamicFormControlEvent): boolean {
-    if (!(event.model instanceof DynamicScrollableDropdownModel)) {
-      return false;
-    }
-    const metadata = this.formOperationsService.getFieldPathSegmentedFromChangeEvent(event);
-    const value = this.formOperationsService.getFieldValueFromChangeEvent(event);
-    if (isEmpty(value) || isEmpty(value.value)) {
-      // clearing the dropdown must keep working
-      return false;
-    }
-    const entries: any[] = (isNotEmpty(this.formData) && this.formData[metadata]) || [];
-    return entries.filter((entry) => hasValue(entry) && entry.value === value.value).length > 1;
-  }
-
-  /**
-   * Revert a duplicate dropdown selection: restore the previous value (if any),
-   * re-sync the form store and notify the user with a warning.
-   *
-   * @param event
-   *    the [[DynamicFormControlEvent]] emitted
-   */
-  private revertDuplicateVocabularyEntry(event: DynamicFormControlEvent): void {
-    const previous = this.previousValue.isPathEqual(this.formBuilderService.getPath(event.model))
-      ? this.previousValue.value : null;
-    event.control.setValue(previous);
-    // changeForm rebuilds the store from the model, so revert model.value too.
-    (event.model as any).value = previous;
-    event.control.markAsPristine();
-    this.previousValue.delete();
-    this.formService.changeForm(this.formId, this.formModel);
-    this.notificationsService.warning(null, this.translate.get('datashare.submission.sections.form.duplicate-value'));
   }
 
   private hasRelatedCustomError(medatata): boolean {

@@ -34,6 +34,7 @@ import {
 } from 'rxjs';
 import {
   catchError,
+  distinctUntilChanged,
   finalize,
   map,
   take,
@@ -145,9 +146,7 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
     });
 
 
-    // No distinctUntilChanged: the duplicate-value guard may revert the control to its
-    // previous object reference, and the displayed value must still refresh.
-    this.group.get(this.model.id).valueChanges
+    this.group.get(this.model.id).valueChanges.pipe(distinctUntilChanged())
       .subscribe((value) => {
         this.setCurrentValue(value);
       });
@@ -372,11 +371,8 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
       return;
     }
     this.group.markAsDirty();
-    // setCurrentValue before dispatchUpdate: the change is handled synchronously and the
-    // duplicate-value guard may revert the control, so dispatching first would leave the
-    // rejected value on screen.
-    this.setCurrentValue(event);
     this.dispatchUpdate(event);
+    this.setCurrentValue(event);
   }
 
   /**

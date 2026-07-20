@@ -310,19 +310,6 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
         expect(scrollableDropdownComp.isOptionDisabled({ value: 1 })).toBeFalsy();
       });
 
-      it('should keep a display value reverted synchronously by a change handler', () => {
-        const previousEntry = Object.assign(new VocabularyEntry(), { authority: 2, display: 'two', value: 2 });
-        const selectedEntry = Object.assign(new VocabularyEntry(), { authority: 3, display: 'three', value: 3 });
-        scrollableDropdownComp.change.subscribe(() => {
-          SD_TEST_GROUP.get('dropdown').setValue(previousEntry);
-        });
-
-        scrollableDropdownComp.onSelect(selectedEntry);
-
-        let displayed: string;
-        scrollableDropdownComp.currentValue.subscribe((v) => displayed = v);
-        expect(displayed).toBe('two');
-      });
     });
 
     describe('when init model value is not empty', () => {
