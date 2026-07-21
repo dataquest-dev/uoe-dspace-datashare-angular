@@ -26,8 +26,8 @@
       /* Intercept (don't pass through) pointer input while the frozen clone is shown: the live app
          hydrating underneath is not what the user sees, so a click here must NOT reach it. `inert`
          already neutralises the clone's own controls, so intercepted input is simply swallowed until
-         the overlay fades. During fade-out we flip this to `none` (see __dspaceRemoveSsrOverlay) so
-         the now-revealed live app is interactive immediately, not after the 150ms crossfade. */
+         the overlay fades. During fade-out we flip this to `none` (see the reveal watcher) so the
+         now-revealed live app is interactive immediately, not after the 150ms crossfade. */
       pointer-events: auto;
     }
   </style>
@@ -37,82 +37,163 @@
   <ds-app></ds-app>
 <script>
 /*
-  Hydration-safe anti-flicker overlay.
+  Hydration-safe anti-flicker overlay + fullscreen-loader mask.
 
-  Why this is needed even though provideClientHydration() is enabled: this app DOES hydrate, but
-  DSpace's theme system defeats it for themed wrappers. Every visible wrapper is a `ds-themed-*`
-  (ThemedComponent) that builds its real content imperatively via ViewContainerRef.createComponent()
-  in a client-side, async ngAfterViewInit (dynamic import of the theme chunk), and removes the
-  projected SSR content. Angular hydration can't reuse imperatively-created components, and the SSR
-  markup no longer matches the declarative template -> node mismatch -> destructive re-render of the
-  themed subtrees, whose own async data (community/collection counts, recent submissions, ...) then
-  pops in a beat later -> the visible "flicker"/reflow on reload. Upstream issue:
-  DSpace/dspace-angular#3867.
+  Two visible glitches this removes, both rooted in the same thing -- the live DOM briefly showing
+  something other than the finished routed page while <ds-app> re-renders:
 
-  We therefore must NOT touch the DOM Angular hydrates (moving nodes out from under it, as the
-  Angular-15 variant of this fix does on instances without hydration, would only worsen the
-  mismatch here). Instead we paint a detached CLONE of the SSR view on top, let hydration + the
-  themed re-render happen invisibly underneath on the untouched original, and drop the clone once
-  the routed DOM has settled (AppComponent.removeSsrOverlayWhenContentVisible), with a 15s hard
-  fallback.
+  1. Reload flicker. provideClientHydration() is enabled, but DSpace's theme system defeats it:
+     every wrapper is a `ds-themed-*` (ThemedComponent) that rebuilds its real content imperatively
+     via ViewContainerRef.createComponent() in a client-side async ngAfterViewInit. Angular hydration
+     can't reuse that, so the themed subtrees (header/navbar/footer/...) are destroyed and rebuilt on
+     the client, popping in a beat after first paint. Upstream: DSpace/dspace-angular#3867.
+
+  2. Post-login flash. Login does a hard redirect through `/reload/<ts>` -> `/home`; while auth is
+     (re)established, root.component.html hides the whole `.outer-wrapper` (incl. #main-content) via
+     `d-none` and paints `.ds-full-screen-loader` (a white screen + spinner) -- on the current page
+     right after submit AND across the reload. Left unmasked that is a ~1s white flash.
+
+  Approach: paint a detached CLONE of the last real SSR/routed view on top (we never move the DOM
+  Angular hydrates -- moving would worsen the mismatch), and keep the page masked while the live
+  <ds-app> shows the loader / an unpainted route. The mask lifts (150ms fade) only once the routed
+  content is genuinely painted (no `.ds-full-screen-loader`, #main-content has real layout height).
+  Self-disables under Cypress / navigator.webdriver so it never touches e2e tests. Every mask has a
+  15s hard cap so a stuck app can never trap the user behind the frozen frame.
 */
 (function () {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (typeof window === 'undefined' || typeof document === 'undefined') { return; }
   // Cypress drives the real app; a duplicated clone would break element-uniqueness selectors.
-  if (typeof window.Cypress !== 'undefined') return;
-  // Same reasoning for any WebDriver-based automation (Playwright/Selenium/headless CI)
-  if (typeof navigator !== 'undefined' && navigator.webdriver) return;
-  try {
-    var app = document.querySelector('ds-app');
-    // No SSR content (e.g. an SSR-excluded route) -> nothing to mask.
-    if (!app || !app.firstElementChild) return;
-    if (document.getElementById('__dspace_ssr_overlay')) return;
+  if (typeof window.Cypress !== 'undefined') { return; }
+  // Same reasoning for any WebDriver-based automation (Playwright/Selenium/headless CI).
+  if (typeof navigator !== 'undefined' && navigator.webdriver) { return; }
 
+  var STORE_KEY = '__dspace_ssr_frame';
+  var OVERLAY_ID = '__dspace_ssr_overlay';
+  var MIN_CONTENT_HEIGHT = 200; // px: proves #main-content is no longer the d-none'd / empty shell
+  var MASK_MAX_MS = 15000;      // absolute cap per mask -- never trap the user behind a frozen frame
+
+  function dsApp() { return document.querySelector('ds-app'); }
+
+  // "Real content" = has children and is NOT the fullscreen auth/theme loader (white + spinner).
+  function isRealContent(el) {
+    return !!(el && el.firstElementChild && !el.querySelector('.ds-full-screen-loader'));
+  }
+
+  // The routed page is actually painted (safe to reveal): no fullscreen loader AND #main-content has
+  // real layout height. While the loader shows, root.component.html d-none's #main-content's wrapper,
+  // so its own getBoundingClientRect height is 0 even though it is still in the DOM.
+  function contentPainted() {
+    var app = dsApp();
+    if (!app) { return true; }
+    if (app.querySelector('.ds-full-screen-loader')) { return false; }
+    var mc = app.querySelector('#main-content');
+    var h = (mc && mc.getBoundingClientRect) ? mc.getBoundingClientRect().height : 0;
+    if (h < MIN_CONTENT_HEIGHT) { return false; }
+    // Also require the themed navbar to be present with real height. #main-content reports height even
+    // while the imperative themed re-render (header/navbar) is still mid-flight or the async home data
+    // hasn't landed -- revealing then flashes an unstyled/half-built page. The themed navbar being laid
+    // out is a good "the routed page is really rendered" proxy on the datashare theme. If a route has no
+    // such navbar this stays false and the 15s cap reveals anyway.
+    var nav = app.querySelector('#main-navbar');
+    var nh = (nav && nav.getBoundingClientRect) ? nav.getBoundingClientRect().height : 0;
+    return nh > 0;
+  }
+
+  // Remember the current real view so a later loader/racy-reload can be masked with it.
+  function rememberFrame() {
+    var app = dsApp();
+    if (isRealContent(app)) {
+      try { sessionStorage.setItem(STORE_KEY, app.outerHTML); } catch (e) { /* quota / disabled */ }
+    }
+  }
+  function savedFrameNode() {
+    var saved = null;
+    try { saved = sessionStorage.getItem(STORE_KEY); } catch (e) { /* disabled */ }
+    if (!saved) { return null; }
+    var holder = document.createElement('div');
+    holder.innerHTML = saved;
+    return holder.firstElementChild; // the saved <ds-app> element, _ngcontent attrs intact
+  }
+
+  // Install an opaque, inert freeze-frame from a detached <ds-app> node, then watch for reveal.
+  function installMask(sourceNode) {
+    if (!sourceNode || document.getElementById(OVERLAY_ID)) { return; }
     var overlay = document.createElement('div');
-    overlay.id = '__dspace_ssr_overlay';
-    // It's a visual duplicate of content the real app still exposes; hide it from a11y tree
-    // and make it inert so keyboard focus can't land on the dead cloned controls.
+    overlay.id = OVERLAY_ID;
+    // Visual duplicate of content the real app still exposes; hide from a11y tree + make inert so
+    // keyboard focus can't land on the dead cloned controls.
     overlay.setAttribute('aria-hidden', 'true');
     overlay.setAttribute('inert', '');
-
-    // CLONE (deep), never move: the originals stay exactly where Angular expects to hydrate them.
-    // The clone keeps every _nghost/_ngcontent attribute AND every id, so the frozen frame is
-    // pixel-identical to the SSR paint. (We deliberately do NOT strip ids from the clone: many
-    // component and global styles are id-gated -- e.g. the global `#main-content { flex: 1 1 100% }`
-    // and the datashare `#main-navbar` nav spacing -- and under emulated encapsulation an id rule
-    // compiles to `#id[_ngcontent-...]`, so dropping the id would silently unstyle the clone and turn
-    // the fade-out into the very layout jump this overlay exists to hide. Duplicate ids are harmless
-    // here: the clone is appended AFTER <ds-app>, so document.getElementById/querySelector return the
-    // live element by document order whenever it exists, and the only id looked up in code
-    // (`#main-content`, via the skip-to-content link) can't be triggered behind this opaque `inert`
-    // overlay.)
-    overlay.appendChild(app.cloneNode(true));
+    overlay.appendChild(sourceNode);
+    overlay._dsDeadline = Date.now() + MASK_MAX_MS;
     document.body.appendChild(overlay);
+    revealWhenPainted();
+  }
 
-    var removing = false;
-    window.__dspaceRemoveSsrOverlay = function () {
-      // Re-entrancy guard so a racing DOM-settle removal + the 15s fallback can't double-run the fade.
-      if (removing) return;
-      removing = true;
-      window.__dspaceRemoveSsrOverlay = null;
+  // DOM activity clock: the MutationObserver below stamps this on every childList change, so the
+  // reveal can wait for the app to go QUIET (the themed re-render on reload, and the loader dance on
+  // login, both churn the DOM) rather than lifting the instant content first appears.
+  var lastMutationAt = Date.now();
+  var SETTLE_QUIET_MS = 800;
 
-      var el = document.getElementById('__dspace_ssr_overlay');
-      if (!el) return;
-      // Hand interaction to the live app for the whole crossfade, not just after it.
-      el.style.pointerEvents = 'none';
-      el.style.transition = 'opacity 150ms ease-out';
-      el.style.opacity = '0';
-      setTimeout(function () {
-        if (el && el.parentNode) el.parentNode.removeChild(el);
-      }, 200);
-    };
+  // Lift the current mask once the routed page is painted AND the DOM has settled (or the 15s cap
+  // elapses); 150ms fade. Waiting for both is what keeps the reload's themed-wrapper re-render and
+  // the post-login loader from peeking out: content-painted alone fires a frame or two too early.
+  function revealWhenPainted() {
+    var el = document.getElementById(OVERLAY_ID);
+    if (!el || el._dsFading) { return; }
+    var settled = contentPainted() && (Date.now() - lastMutationAt) >= SETTLE_QUIET_MS;
+    if (!settled && Date.now() < el._dsDeadline) {
+      if (typeof window.requestAnimationFrame === 'function') { window.requestAnimationFrame(revealWhenPainted); }
+      else { setTimeout(revealWhenPainted, 50); }
+      return;
+    }
+    el._dsFading = true;
+    el.style.pointerEvents = 'none'; // hand interaction to the live app for the whole crossfade
+    el.style.transition = 'opacity 150ms ease-out';
+    el.style.opacity = '0';
+    setTimeout(function () { if (el && el.parentNode) { el.parentNode.removeChild(el); } }, 200);
+  }
 
-    // Safety net: if AppComponent never removes it, never trap the user behind the frozen frame.
-    setTimeout(function () {
-      if (typeof window.__dspaceRemoveSsrOverlay === 'function') {
-        window.__dspaceRemoveSsrOverlay();
+  // AppComponent calls this once it considers the routed page visible; it just nudges the reveal
+  // check (which still waits for the loader to actually be gone + content painted).
+  window.__dspaceRemoveSsrOverlay = function () { revealWhenPainted(); };
+
+  try {
+    var app = dsApp();
+    if (!app || !app.firstElementChild) { return; } // SSR-excluded route -> nothing to mask
+
+    // Watch the DOM for the whole session: stamp the activity clock (drives the reveal's quiet
+    // window), keep the page masked whenever the fullscreen auth/theme loader appears unmasked (the
+    // ~1s white spinner shown on the current page right after a login submit -- before the /reload
+    // hard-redirect -- and again across /reload -> /home), and keep the saved frame fresh (debounced)
+    // while idle. Cheap: each mutation runs a couple of querySelectors.
+    var rememberTimer = null;
+    function onDomChanged() {
+      lastMutationAt = Date.now();
+      if (document.getElementById(OVERLAY_ID)) { return; } // already masked; reveal watcher lifts it
+      var app2 = dsApp();
+      if (app2 && app2.querySelector('.ds-full-screen-loader')) {
+        installMask(savedFrameNode()); // fullscreen loader is up and nothing masks it -> re-mask
+      } else {
+        if (rememberTimer) { clearTimeout(rememberTimer); }
+        rememberTimer = setTimeout(function () {
+          if (!document.getElementById(OVERLAY_ID) && contentPainted()) { rememberFrame(); }
+        }, 500);
       }
-    }, 15000);
+    }
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(onDomChanged).observe(document.documentElement, { childList: true, subtree: true });
+    }
+
+    // Install the mask FIRST (a fast cloneNode), before anything slow, so it covers the SSR paint with
+    // no gap. Initial source: the live SSR when it's real content (pixel-identical, and on a post-login
+    // /reload it already includes the logged-in admin sidebar -> no layout jump on reveal); otherwise
+    // the last remembered frame so a loader/empty reload paint doesn't flash.
+    var initialReal = isRealContent(app);
+    installMask(initialReal ? app.cloneNode(true) : savedFrameNode());
+    // Only now do the slow work of serialising the frame to remember it for a later loader/reload.
+    if (initialReal) { rememberFrame(); }
   } catch (e) {
     if (window.console && typeof console.warn === 'function') {
       console.warn('[dspace-ssr-overlay] disabled due to error:', e);
