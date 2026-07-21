@@ -79,6 +79,13 @@
     return !!(el && el.firstElementChild && !el.querySelector('.ds-full-screen-loader'));
   }
 
+  // True if this <ds-app> subtree is rendered in the LOGGED-IN state: the header shows the user-menu
+  // (avatar / logout), never present when logged out. Used to pick a mask source whose auth state (and
+  // therefore its admin sidebar / content offset) matches what the reloaded page will settle to.
+  function loggedInChrome(el) {
+    return !!(el && el.querySelector && el.querySelector('.fa-user-circle, .dropdownLogout, [data-test="user-menu"]'));
+  }
+
   // The routed page is actually painted (safe to reveal): no fullscreen loader AND #main-content has
   // real layout height. While the loader shows, root.component.html d-none's #main-content's wrapper,
   // so its own getBoundingClientRect height is 0 even though it is still in the DOM.
@@ -148,6 +155,10 @@
       else { setTimeout(revealWhenPainted, 50); }
       return;
     }
+    // The live page is now settled: remember it as the frame to mask the NEXT reload with, so that
+    // reload's mask matches this exact rendered state (incl. client-only chrome like the admin sidebar).
+    // Only when genuinely settled -- never on a deadline bail-out over a half-built page.
+    if (settled) { rememberFrame(); }
     el._dsFading = true;
     el.style.pointerEvents = 'none'; // hand interaction to the live app for the whole crossfade
     el.style.transition = 'opacity 150ms ease-out';
@@ -186,14 +197,20 @@
       new MutationObserver(onDomChanged).observe(document.documentElement, { childList: true, subtree: true });
     }
 
-    // Install the mask FIRST (a fast cloneNode), before anything slow, so it covers the SSR paint with
-    // no gap. Initial source: the live SSR when it's real content (pixel-identical, and on a post-login
-    // /reload it already includes the logged-in admin sidebar -> no layout jump on reveal); otherwise
-    // the last remembered frame so a loader/empty reload paint doesn't flash.
-    var initialReal = isRealContent(app);
-    installMask(initialReal ? app.cloneNode(true) : savedFrameNode());
-    // Only now do the slow work of serialising the frame to remember it for a later loader/reload.
-    if (initialReal) { rememberFrame(); }
+    // Install the mask FIRST (before anything slow) so it covers the SSR paint with no gap. Mask with
+    // whichever source matches the auth state the page will settle to, so client-only chrome (most
+    // visibly the logged-in admin sidebar, which shifts the body ~55px) is already in the mask and
+    // nothing moves at reveal. The logged-in header user-menu is the tell:
+    //   - login /reload: the fresh SSR renders authenticated (sidebar present) -> clone the live SSR
+    //   - logged-in F5 reload: the SSR renders anonymous, but the remembered settled frame is logged-in
+    //   - logged-out: neither is logged-in -> the remembered settled frame (or SSR clone on first load)
+    // We do NOT rememberFrame() here -- the pre-hydration SSR is the unsettled state we must not save;
+    // rememberFrame() runs at reveal (revealWhenPainted), once the live page has actually settled.
+    var ssrClone = isRealContent(app) ? app.cloneNode(true) : null;
+    var savedNode = savedFrameNode();
+    installMask(loggedInChrome(ssrClone) ? ssrClone
+      : loggedInChrome(savedNode) ? savedNode
+      : (savedNode || ssrClone));
   } catch (e) {
     if (window.console && typeof console.warn === 'function') {
       console.warn('[dspace-ssr-overlay] disabled due to error:', e);
