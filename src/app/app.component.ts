@@ -259,7 +259,13 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       distinctUntilChanged(),
     );
 
-    this.dispatchWindowSize(this._window.nativeWindow.innerWidth, this._window.nativeWindow.innerHeight);
+    // Window size only has meaning in the browser. On the server `nativeWindow` is unavailable, so
+    // dispatching here would overwrite the desktop default in hostWindow.reducer with an undefined
+    // size — keep the default (which is what SSR renders responsive components with). See the note on
+    // the reducer's initialState.
+    if (isPlatformBrowser(this.platformId)) {
+      this.dispatchWindowSize(this._window.nativeWindow.innerWidth, this._window.nativeWindow.innerHeight);
+    }
   }
 
   private storeCSSVariables() {
