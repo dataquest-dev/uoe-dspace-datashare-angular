@@ -23,7 +23,12 @@
       z-index: 10000;
       background: #fff;
       overflow: hidden;
-      pointer-events: none;
+      /* Intercept (don't pass through) pointer input while the frozen clone is shown: the live app
+         hydrating underneath is not what the user sees, so a click here must NOT reach it. `inert`
+         already neutralises the clone's own controls, so intercepted input is simply swallowed until
+         the overlay fades. During fade-out we flip this to `none` (see __dspaceRemoveSsrOverlay) so
+         the now-revealed live app is interactive immediately, not after the 150ms crossfade. */
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -71,8 +76,16 @@
     overlay.setAttribute('inert', '');
 
     // CLONE (deep), never move: the originals stay exactly where Angular expects to hydrate them.
-    // The clone keeps every _nghost/_ngcontent attribute, so the global component styles in <head>
-    // still apply and the frozen frame looks identical to the SSR paint.
+    // The clone keeps every _nghost/_ngcontent attribute AND every id, so the frozen frame is
+    // pixel-identical to the SSR paint. (We deliberately do NOT strip ids from the clone: many
+    // component and global styles are id-gated -- e.g. the global `#main-content { flex: 1 1 100% }`
+    // and the datashare `#main-navbar` nav spacing -- and under emulated encapsulation an id rule
+    // compiles to `#id[_ngcontent-...]`, so dropping the id would silently unstyle the clone and turn
+    // the fade-out into the very layout jump this overlay exists to hide. Duplicate ids are harmless
+    // here: the clone is appended AFTER <ds-app>, so document.getElementById/querySelector return the
+    // live element by document order whenever it exists, and the only id looked up in code
+    // (`#main-content`, via the skip-to-content link) can't be triggered behind this opaque `inert`
+    // overlay.)
     overlay.appendChild(app.cloneNode(true));
     document.body.appendChild(overlay);
 
@@ -85,6 +98,8 @@
 
       var el = document.getElementById('__dspace_ssr_overlay');
       if (!el) return;
+      // Hand interaction to the live app for the whole crossfade, not just after it.
+      el.style.pointerEvents = 'none';
       el.style.transition = 'opacity 150ms ease-out';
       el.style.opacity = '0';
       setTimeout(function () {
