@@ -18,6 +18,14 @@ html {
     }
 }
 
+// ng-bootstrap pads the body by the scrollbar's width when a modal opens, to compensate for the
+// scrollbar it is about to hide. With the gutter reserved above, that width is never actually freed,
+// so the compensation is pure surplus and shifts the page left by half of it -- the very thing the
+// reserved gutter exists to prevent. Cancel it; the gutter already keeps the width steady.
+body.modal-open {
+    padding-right: 0 !important;
+}
+
 body {
     overflow-x: hidden;
 }

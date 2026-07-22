@@ -7,28 +7,20 @@
   <title>DSpace</title>
   <meta name="viewport" content="width=device-width,minimum-scale=1">
   <meta http-equiv="cache-control" content="no-store">
-  <style id="__dspace-ssr-overlay-style">
-    /* Hydration-safe anti-flicker overlay (DSpace 8 / Angular 17 + provideClientHydration).
-       Unlike the anti-flicker overlay used on this org's Angular-15 DSpace-7 customer instances,
-       this NEVER moves or mutates the SSR DOM that Angular hydrates - it only paints a detached
-       *clone* on top. See the bootstrap script below + AppComponent.removeSsrOverlayWhenContentVisible.
-       Root cause this masks: DSpace's ThemedComponent instantiates themed wrappers imperatively
-       (ViewContainerRef.createComponent in ngAfterViewInit), which Angular hydration cannot reuse,
-       so every themed subtree (header, footer, community-list, ...) is re-created client-side and
-       any of its own async data (e.g. community counts) pops in after that, producing the reload
-       flicker/layout-shift. Tracked upstream: DSpace/dspace-angular#3867. */
+  <style>
+    /* Anti-flicker overlay: a detached clone of the settled page painted on top while Angular
+       re-renders underneath. See the bootstrap script in <body> for why it is needed. */
     #__dspace_ssr_overlay {
       position: fixed;
       inset: 0;
       z-index: 10000;
       background: #fff;
       overflow: hidden;
-      /* Intercept (don't pass through) pointer input while the frozen clone is shown: the live app
-         hydrating underneath is not what the user sees, so a click here must NOT reach it. `inert`
-         already neutralises the clone's own controls, so intercepted input is simply swallowed until
-         the overlay fades. During fade-out we flip this to `none` (see the reveal watcher) so the
-         now-revealed live app is interactive immediately, not after the 150ms crossfade. */
-      pointer-events: auto;
+      /* Never absorb input. `inert` stops the dead clone taking focus, but it does not let a click
+         through to the live app underneath - it swallows it, leaving the whole page unresponsive for
+         as long as the mask is up. The mask also lifts on the first interaction, so the user sees the
+         result of the click they just made rather than a frozen picture of the previous page. */
+      pointer-events: none;
     }
   </style>
 </head>
@@ -37,28 +29,21 @@
   <ds-app></ds-app>
 <script>
 /*
-  Hydration-safe anti-flicker overlay + fullscreen-loader mask.
+  Anti-flicker overlay: paints a detached clone of the settled page on top while <ds-app> re-renders,
+  and lifts once the routed page is genuinely painted (150ms fade).
 
-  Two visible glitches this removes, both rooted in the same thing -- the live DOM briefly showing
-  something other than the finished routed page while <ds-app> re-renders:
+  Why it is needed: provideClientHydration() is enabled, but DSpace's theme system defeats it. Every
+  wrapper is a `ds-themed-*` whose real content is built imperatively via ViewContainerRef
+  .createComponent() in a client-side ngAfterViewInit, so hydration cannot reuse it and every themed
+  subtree is destroyed and rebuilt a beat after first paint. Upstream: DSpace/dspace-angular#3867.
+  The same mask covers the post-login white flash, where root.component hides `.outer-wrapper` behind
+  `.ds-full-screen-loader` across the `/reload/<ts>` -> `/home` redirect.
 
-  1. Reload flicker. provideClientHydration() is enabled, but DSpace's theme system defeats it:
-     every wrapper is a `ds-themed-*` (ThemedComponent) that rebuilds its real content imperatively
-     via ViewContainerRef.createComponent() in a client-side async ngAfterViewInit. Angular hydration
-     can't reuse that, so the themed subtrees (header/navbar/footer/...) are destroyed and rebuilt on
-     the client, popping in a beat after first paint. Upstream: DSpace/dspace-angular#3867.
+  It must be inline and synchronous: the CLI injects the bundles as deferred module scripts, so no
+  Angular hook can run before the SSR DOM has already been painted.
 
-  2. Post-login flash. Login does a hard redirect through `/reload/<ts>` -> `/home`; while auth is
-     (re)established, root.component.html hides the whole `.outer-wrapper` (incl. #main-content) via
-     `d-none` and paints `.ds-full-screen-loader` (a white screen + spinner) -- on the current page
-     right after submit AND across the reload. Left unmasked that is a ~1s white flash.
-
-  Approach: paint a detached CLONE of the last real SSR/routed view on top (we never move the DOM
-  Angular hydrates -- moving would worsen the mismatch), and keep the page masked while the live
-  <ds-app> shows the loader / an unpainted route. The mask lifts (150ms fade) only once the routed
-  content is genuinely painted (no `.ds-full-screen-loader`, #main-content has real layout height).
-  Self-disables under Cypress / navigator.webdriver so it never touches e2e tests. Every mask has a
-  15s hard cap so a stuck app can never trap the user behind the frozen frame.
+  Safety rails: self-disables under Cypress / navigator.webdriver, never absorbs input, lifts on the
+  first user interaction, and has a 15s hard cap -- it can never trap the user behind a frozen frame.
 */
 (function () {
   if (typeof window === 'undefined' || typeof document === 'undefined') { return; }
@@ -106,19 +91,28 @@
     return nh > 0;
   }
 
-  // Remember the current real view so a later loader/racy-reload can be masked with it.
+  function currentUrl() { return location.pathname + location.search; }
+
+  // Remember the current real view so a later loader/racy-reload can be masked with it. Keyed by URL:
+  // masking a page with a picture of a DIFFERENT one (or with logged-in chrome after a logout) shows
+  // the user a page they are not on any more.
   function rememberFrame() {
     var app = dsApp();
     if (isRealContent(app)) {
-      try { sessionStorage.setItem(STORE_KEY, app.outerHTML); } catch (e) { /* quota / disabled */ }
+      try {
+        sessionStorage.setItem(STORE_KEY, JSON.stringify({ url: currentUrl(), html: app.outerHTML }));
+      } catch (e) { /* quota / disabled */ }
     }
   }
   function savedFrameNode() {
     var saved = null;
     try { saved = sessionStorage.getItem(STORE_KEY); } catch (e) { /* disabled */ }
     if (!saved) { return null; }
+    var frame = null;
+    try { frame = JSON.parse(saved); } catch (e) { return null; }
+    if (!frame || !frame.html || frame.url !== currentUrl()) { return null; }
     var holder = document.createElement('div');
-    holder.innerHTML = saved;
+    holder.innerHTML = frame.html;
     return holder.firstElementChild; // the saved <ds-app> element, _ngcontent attrs intact
   }
 
@@ -160,15 +154,22 @@
     // Only when genuinely settled -- never on a deadline bail-out over a half-built page.
     if (settled) { rememberFrame(); }
     el._dsFading = true;
-    el.style.pointerEvents = 'none'; // hand interaction to the live app for the whole crossfade
     el.style.transition = 'opacity 150ms ease-out';
     el.style.opacity = '0';
     setTimeout(function () { if (el && el.parentNode) { el.parentNode.removeChild(el); } }, 200);
   }
 
-  // AppComponent calls this once it considers the routed page visible; it just nudges the reveal
-  // check (which still waits for the loader to actually be gone + content painted).
-  window.__dspaceRemoveSsrOverlay = function () { revealWhenPainted(); };
+  // The moment the user interacts, drop the mask: their click already went through to the live app
+  // (the overlay is pointer-events: none), so continuing to show a frozen picture of the previous page
+  // would hide the very navigation they just triggered -- and their own click churns the DOM, which
+  // pushes the quiet-window reveal further away. Clearing the deadline makes revealWhenPainted lift on
+  // this frame without remembering a half-built frame.
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (type) {
+    window.addEventListener(type, function () {
+      var el = document.getElementById(OVERLAY_ID);
+      if (el && !el._dsFading) { el._dsDeadline = 0; revealWhenPainted(); }
+    }, { capture: true, passive: true });
+  });
 
   try {
     var app = dsApp();
