@@ -4844,6 +4844,16 @@
 
   "submission.general.info.pending-changes": "Unsaved changes",
 
+  "submission.general.info.saving": "Saving...",
+
+  "submission.general.info.depositing": "Depositing...",
+
+  "submission.general.info.ingesting-from-path": "Ingesting file from server...",
+
+  "submission.general.info.ingesting-from-path-elapsed": "Elapsed: {{elapsed}}",
+
+  "submission.general.info.ingesting-from-path-hint": "The file is being read directly from the server. This can take several minutes for a large file, so please keep this tab open.",
+
   "submission.general.save": "Save",
 
   "submission.general.save-later": "Save for later",

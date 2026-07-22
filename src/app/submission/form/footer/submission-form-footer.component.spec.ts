@@ -7,8 +7,11 @@ import {
 } from '@angular/core';
 import {
   ComponentFixture,
+  discardPeriodicTasks,
+  fakeAsync,
   inject,
   TestBed,
+  tick,
   waitForAsync,
 } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -22,11 +25,15 @@ import {
   getTestScheduler,
   hot,
 } from 'jasmine-marbles';
-import { of as observableOf } from 'rxjs';
+import {
+  BehaviorSubject,
+  of as observableOf,
+} from 'rxjs';
 import { TestScheduler } from 'rxjs/testing';
 
 import { SubmissionRestService } from '../../../core/submission/submission-rest.service';
 import { DatashareSubmissionService } from '../../../datashare/datashare-submission.service';
+import { DatashareUploadFromPathService } from '../../../datashare/datashare-upload-from-path.service';
 import { BtnDisabledDirective } from '../../../shared/btn-disabled.directive';
 import { mockSubmissionId } from '../../../shared/mocks/submission.mock';
 import { SubmissionRestServiceStub } from '../../../shared/testing/submission-rest-service.stub';
@@ -41,6 +48,12 @@ const submissionId = mockSubmissionId;
 
 const mockDatashareSubmissionService = {
   hasUploadFilesErrorsSignal: signal(true),
+};
+
+const pathIngestPending$ = new BehaviorSubject<boolean>(false);
+
+const mockDatashareUploadFromPathService = {
+  isPendingForSubmission: () => pathIngestPending$.asObservable(),
 };
 
 describe('SubmissionFormFooterComponent', () => {
@@ -64,6 +77,7 @@ describe('SubmissionFormFooterComponent', () => {
         { provide: SubmissionService, useValue: submissionServiceStub },
         { provide: SubmissionRestService, useClass: SubmissionRestServiceStub },
         { provide: DatashareSubmissionService, useValue: mockDatashareSubmissionService },
+        { provide: DatashareUploadFromPathService, useValue: mockDatashareUploadFromPathService },
         ChangeDetectorRef,
         NgbModal,
         SubmissionFormFooterComponent,
@@ -79,6 +93,7 @@ describe('SubmissionFormFooterComponent', () => {
     // synchronous beforeEach
     beforeEach(() => {
       submissionServiceStub.getSubmissionStatus.and.returnValue(observableOf(true));
+      submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(observableOf(false));
       const html = `
         <ds-submission-form-footer [submissionId]="submissionId"></ds-submission-form-footer>`;
 
@@ -267,6 +282,192 @@ describe('SubmissionFormFooterComponent', () => {
       expect(saveBtn.nativeElement.getAttribute('aria-disabled')).toBe('false');
       expect(saveBtn.nativeElement.classList.contains('disabled')).toBeFalse();
     });
+
+    // DATASHARE - start
+    describe('when a save is in progress', () => {
+
+      const triggerNgOnChanges = () => comp.ngOnChanges({
+        submissionId: new SimpleChange(null, submissionId, true),
+      });
+
+      beforeEach(() => {
+        pathIngestPending$.next(false);
+        submissionServiceStub.getSubmissionStatus.and.returnValue(observableOf(true));
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(observableOf(false));
+        submissionServiceStub.getSubmissionDepositProcessingStatus.and.returnValue(observableOf(false));
+        submissionServiceStub.hasUnsavedModification.and.returnValue(observableOf(false));
+      });
+
+      it('should label the save progress bar with the plain saving message when no path ingest is pending', () => {
+        triggerNgOnChanges();
+
+        let label: string;
+        comp.savingLabelKey$.subscribe((key: string) => label = key);
+
+        expect(label).toBe('submission.general.info.saving');
+      });
+
+      it('should label the save progress bar with the ingest message when a path ingest is pending', () => {
+        pathIngestPending$.next(true);
+        triggerNgOnChanges();
+
+        let label: string;
+        comp.savingLabelKey$.subscribe((key: string) => label = key);
+
+        expect(label).toBe('submission.general.info.ingesting-from-path');
+      });
+
+      it('should render a translation key rather than hardcoded English while saving', () => {
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(observableOf(true));
+        triggerNgOnChanges();
+        fixture.detectChanges();
+
+        const progressBar: any = fixture.debugElement.query(By.css('.progress-bar'));
+
+        expect(progressBar.nativeElement.textContent).toContain('submission.general.info.saving');
+        expect(progressBar.nativeElement.textContent).not.toContain('Saving...');
+      });
+
+      it('should render the ingest message while a path ingest is in progress', fakeAsync(() => {
+        pathIngestPending$.next(true);
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(observableOf(true));
+        triggerNgOnChanges();
+        fixture.detectChanges();
+
+        const progressBar: any = fixture.debugElement.query(By.css('.progress-bar'));
+
+        expect(progressBar.nativeElement.textContent).toContain('submission.general.info.ingesting-from-path');
+        discardPeriodicTasks();
+      }));
+
+      it('should render a translation key rather than hardcoded English while depositing', () => {
+        submissionServiceStub.getSubmissionDepositProcessingStatus.and.returnValue(observableOf(true));
+        triggerNgOnChanges();
+        fixture.detectChanges();
+
+        const progressBar: any = fixture.debugElement.query(By.css('.progress-bar'));
+
+        expect(progressBar.nativeElement.textContent).toContain('submission.general.info.depositing');
+        expect(progressBar.nativeElement.textContent).not.toContain('Depositing...');
+      });
+
+      it('should run the elapsed timer only while a save is in progress', fakeAsync(() => {
+        const saving$ = new BehaviorSubject<boolean>(false);
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(saving$.asObservable());
+        triggerNgOnChanges();
+
+        const emitted: string[] = [];
+        const subscription = comp.elapsed$.subscribe((elapsed: string) => emitted.push(elapsed));
+
+        tick(3000);
+        expect(emitted).toEqual(['']);
+
+        saving$.next(true);
+        tick(0);
+        expect(emitted[emitted.length - 1]).toBe('00:00');
+
+        tick(2000);
+        expect(emitted[emitted.length - 1]).toBe('00:02');
+
+        saving$.next(false);
+        expect(emitted[emitted.length - 1]).toBe('');
+
+        tick(5000);
+        expect(emitted[emitted.length - 1]).toBe('');
+
+        subscription.unsubscribe();
+        discardPeriodicTasks();
+      }));
+
+      it('should count elapsed wall-clock time rather than timer ticks', fakeAsync(() => {
+        const saving$ = new BehaviorSubject<boolean>(false);
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(saving$.asObservable());
+        triggerNgOnChanges();
+
+        // A tab that has been hidden for a while gets roughly one timer callback a minute, so the
+        // number of emissions says nothing about how long the ingest has really been running.
+        let clock = Date.now();
+        spyOn(Date, 'now').and.callFake(() => clock);
+
+        const emitted: string[] = [];
+        const subscription = comp.elapsed$.subscribe((elapsed: string) => emitted.push(elapsed));
+
+        saving$.next(true);
+        tick(0);
+        expect(emitted[emitted.length - 1]).toBe('00:00');
+
+        clock += 180000;
+        tick(1000);
+        expect(emitted[emitted.length - 1]).toBe('03:00');
+
+        clock += 120000;
+        tick(1000);
+        expect(emitted[emitted.length - 1]).toBe('05:00');
+
+        subscription.unsubscribe();
+        discardPeriodicTasks();
+      }));
+
+      it('should let the minutes run past 59 for an ingest longer than an hour', fakeAsync(() => {
+        const saving$ = new BehaviorSubject<boolean>(false);
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(saving$.asObservable());
+        triggerNgOnChanges();
+
+        let clock = Date.now();
+        spyOn(Date, 'now').and.callFake(() => clock);
+
+        const emitted: string[] = [];
+        const subscription = comp.elapsed$.subscribe((elapsed: string) => emitted.push(elapsed));
+
+        saving$.next(true);
+        tick(0);
+
+        // 65 minutes and 15 seconds
+        clock += 3915000;
+        tick(1000);
+        expect(emitted[emitted.length - 1]).toBe('65:15');
+
+        subscription.unsubscribe();
+        discardPeriodicTasks();
+      }));
+
+      it('should latch the pending state of the save that is running and ignore a later change', () => {
+        const saving$ = new BehaviorSubject<boolean>(false);
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(saving$.asObservable());
+        triggerNgOnChanges();
+
+        const labels: string[] = [];
+        const subscription = comp.savingLabelKey$.subscribe((key: string) => labels.push(key));
+
+        saving$.next(true);
+        // the path is typed while the PATCH that does not carry it is still in flight
+        pathIngestPending$.next(true);
+
+        expect(labels).toEqual(['submission.general.info.saving']);
+
+        subscription.unsubscribe();
+      });
+
+      it('should keep claiming an ingest for the whole of a save that was dispatched with a path', () => {
+        const saving$ = new BehaviorSubject<boolean>(false);
+        submissionServiceStub.getSubmissionSaveProcessingStatus.and.returnValue(saving$.asObservable());
+        pathIngestPending$.next(true);
+        triggerNgOnChanges();
+
+        const labels: string[] = [];
+        const subscription = comp.savingLabelKey$.subscribe((key: string) => labels.push(key));
+
+        saving$.next(true);
+        // the server clears the field, so the live state goes false before the save has come back
+        pathIngestPending$.next(false);
+
+        expect(labels).toEqual(['submission.general.info.ingesting-from-path']);
+
+        subscription.unsubscribe();
+      });
+
+    });
+    // DATASHARE - end
 
   });
 });

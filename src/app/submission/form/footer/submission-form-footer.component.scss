@@ -1,0 +1,12 @@
+/* DATASHARE - start */
+/* The save progress bar carries a label that has to sit on one line.
+ *
+ * .progress-bar is a column flex container with line-height: 0 and overflow: hidden, so a child
+ * element inherits that zero line-height, collapses to zero height and is clipped away entirely.
+ * Wrapping the label in a single child is what keeps the message and the elapsed time on one line
+ * rather than stacked on top of each other, so that child needs a line box of its own.
+ */
+.progress-bar > .ds-progress-label {
+  line-height: 1;
+}
+/* DATASHARE - end */
