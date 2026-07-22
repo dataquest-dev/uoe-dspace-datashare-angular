@@ -4,6 +4,7 @@ import {
   NgIf,
 } from '@angular/common';
 import {
+  AfterViewInit,
   Component,
   Inject,
   Input,
@@ -21,10 +22,12 @@ import {
   of,
 } from 'rxjs';
 import {
+  filter,
   first,
   map,
   skipWhile,
   startWith,
+  take,
 } from 'rxjs/operators';
 import { INotificationBoardOptions } from 'src/config/notifications-config.interfaces';
 
@@ -39,7 +42,6 @@ import {
 } from '../core/services/window.service';
 import { ThemedFooterComponent } from '../footer/themed-footer.component';
 import { ThemedHeaderNavbarWrapperComponent } from '../header-nav-wrapper/themed-header-navbar-wrapper.component';
-import { slideSidebarPadding } from '../shared/animations/slide';
 import { HostWindowService } from '../shared/host-window.service';
 import { LiveRegionComponent } from '../shared/live-region/live-region.component';
 import { ThemedLoadingComponent } from '../shared/loading/themed-loading.component';
@@ -53,7 +55,6 @@ import { SystemWideAlertBannerComponent } from '../system-wide-alert/alert-banne
   selector: 'ds-base-root',
   templateUrl: './root.component.html',
   styleUrls: ['./root.component.scss'],
-  animations: [slideSidebarPadding],
   standalone: true,
   imports: [
     TranslateModule,
@@ -71,7 +72,7 @@ import { SystemWideAlertBannerComponent } from '../system-wide-alert/alert-banne
     LiveRegionComponent,
   ],
 })
-export class RootComponent implements OnInit {
+export class RootComponent implements OnInit, AfterViewInit {
   theme: Observable<ThemeConfig> = of({} as any);
   isSidebarVisible$: Observable<boolean>;
   slideSidebarOver$: Observable<boolean>;
@@ -81,6 +82,24 @@ export class RootComponent implements OnInit {
   models: any;
 
   browserOsClasses = new BehaviorSubject<string[]>([]);
+
+  /**
+   * The admin-sidebar gutter state ('hidden' | 'unpinned' | 'pinned'), applied as a CSS class on the
+   * outer wrapper. See {@link gutterTransitionEnabled}.
+   */
+  sidebarPaddingState$: Observable<string>;
+
+  /**
+   * The classes on the outer wrapper: the browser/OS classes plus the admin-sidebar gutter state.
+   */
+  outerWrapperClasses$: Observable<string[]>;
+
+  /**
+   * Whether the gutter may slide. Only enabled once the sidebar has resolved to visible after
+   * bootstrap (see ngAfterViewInit), so that the initial gutter resolution never animates while
+   * genuine pin/unpin toggles still do.
+   */
+  gutterTransitionEnabled = false;
 
   /**
    * Whether or not to show a full screen loader
@@ -132,9 +151,42 @@ export class RootComponent implements OnInit {
         startWith(true),
       );
 
+    // Drive the outer-wrapper gutter via a CSS class instead of the @slideSidebarPadding animation: the
+    // animation needs a concrete width from the browser-only CSS-variable store, so on the server it
+    // rendered padding-left:0 and the authenticated page jumped right when the SSR snapshot was removed.
+    // The CSS class resolves the gutter from `--ds-admin-sidebar-*` (see root.component.scss), identically
+    // on server and browser -- fixing the jump without any hardcoded width.
+    this.sidebarPaddingState$ = combineLatestObservable([this.isSidebarVisible$, this.slideSidebarOver$]).pipe(
+      map(([visible, over]: [boolean, boolean]) => !visible ? 'hidden' : over ? 'unpinned' : 'pinned'),
+    );
+
+    this.outerWrapperClasses$ = combineLatestObservable([
+      this.browserOsClasses.asObservable(),
+      this.sidebarPaddingState$,
+    ]).pipe(
+      map(([osClasses, paddingState]: [string[], string]) => [...osClasses, `ds-admin-sidebar-${paddingState}`]),
+    );
+
     if (this.router.url === getPageInternalServerErrorRoute()) {
       this.shouldShowRouteLoader = false;
     }
+  }
+
+  ngAfterViewInit(): void {
+    // Browser only; requestAnimationFrame is not defined under SSR.
+    if (typeof requestAnimationFrame !== 'function') {
+      return;
+    }
+    // Enable the gutter slide only once the sidebar has resolved to visible *after bootstrap*, not
+    // merely after the first paint. Angular discards the server-rendered DOM and re-renders it from
+    // scratch, so the gutter briefly falls back to 'hidden' well after that first paint; enabling the
+    // transition any earlier makes that recovery slide the whole page sideways -- the very jump this
+    // fixes. Waiting for `visible` also means the class is only armed when there is a sidebar to pin,
+    // which is the only case where the slide is wanted.
+    this.isSidebarVisible$.pipe(
+      filter((visible: boolean) => visible),
+      take(1),
+    ).subscribe(() => requestAnimationFrame(() => this.gutterTransitionEnabled = true));
   }
 
   skipToMainContent() {
