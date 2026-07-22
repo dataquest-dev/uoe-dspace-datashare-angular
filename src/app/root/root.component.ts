@@ -183,10 +183,17 @@ export class RootComponent implements OnInit, AfterViewInit {
     // transition any earlier makes that recovery slide the whole page sideways -- the very jump this
     // fixes. Waiting for `visible` also means the class is only armed when there is a sidebar to pin,
     // which is the only case where the slide is wanted.
+    // The frames are nested because `visible` turning true is the very change that sets the gutter
+    // class: arming after a single frame can land in the same style recalculation and animate the one
+    // transition that must be instant. The inner frame makes the arming a guaranteed paint boundary.
+    // This is defensive -- the gutter was already applying instantly with a single frame in every run
+    // measured here -- but the failure it prevents is exactly the bug being fixed.
     this.isSidebarVisible$.pipe(
       filter((visible: boolean) => visible),
       take(1),
-    ).subscribe(() => requestAnimationFrame(() => this.gutterTransitionEnabled = true));
+    ).subscribe(() => requestAnimationFrame(() =>
+      requestAnimationFrame(() => this.gutterTransitionEnabled = true),
+    ));
   }
 
   skipToMainContent() {
