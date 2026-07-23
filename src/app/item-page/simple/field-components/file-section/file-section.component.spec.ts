@@ -152,6 +152,14 @@ describe('FileSectionComponent', () => {
       expect(bitstreamDataService.findAllByItemAndBundleName).toHaveBeenCalled();
     });
 
+    it('should fetch only the ORIGINAL bundle, never the licence bundles', () => {
+      const viewMore = fixture.debugElement.query(By.css('.bitstream-view-more'));
+      viewMore.triggerEventHandler('click', null);
+      expect(bitstreamDataService.findAllByItemAndBundleName).toHaveBeenCalledWith(comp.item, 'ORIGINAL', jasmine.anything());
+      expect(bitstreamDataService.findAllByItemAndBundleName).not.toHaveBeenCalledWith(jasmine.anything(), 'CC-LICENSE', jasmine.anything());
+      expect(bitstreamDataService.findAllByItemAndBundleName).not.toHaveBeenCalledWith(jasmine.anything(), 'LICENSE', jasmine.anything());
+    });
+
     it('one bitstream should be on the page', () => {
       const viewMore = fixture.debugElement.query(By.css('.bitstream-view-more'));
       viewMore.triggerEventHandler('click', null);

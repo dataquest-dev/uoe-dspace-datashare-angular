@@ -33,6 +33,11 @@ import { VarDirective } from '../../../../shared/utils/var.directive';
 /**
  * This component renders the file section of the item
  * inside a 'ds-metadata-field-wrapper' component.
+ *
+ * It lists the ORIGINAL bundle only. Licence bundles (CC-LICENSE / LICENSE) are the
+ * responsibility of the theme: the datashare theme renders them in a separate "Licences"
+ * section. Do not fetch them here - they have far fewer pages than ORIGINAL, so paging them
+ * in lockstep would request a page past their end and the REST API would return 500.
  */
 @Component({
   selector: 'ds-base-item-page-file-section',
