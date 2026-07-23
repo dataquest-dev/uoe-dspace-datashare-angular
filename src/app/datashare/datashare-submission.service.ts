@@ -5,8 +5,8 @@ import { Injectable } from '@angular/core';
 })
 export class DatashareSubmissionService {
 
-  MAX_FILE_SIZE_GB = 20;
-  MAX_FILE_SIZE_BYTES = this.MAX_FILE_SIZE_GB * 1024 * 1024 * 1024;
+  private readonly MAX_FILE_SIZE_GB = 20;
+  private readonly MAX_FILE_SIZE_BYTES = this.MAX_FILE_SIZE_GB * 1024 * 1024 * 1024;
 
   /**
    * Calculate total size of uploaded files
@@ -39,8 +39,9 @@ export class DatashareSubmissionService {
     }
 
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    // Clamp the index so very large values never index past the units array (which would render "undefined").
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
