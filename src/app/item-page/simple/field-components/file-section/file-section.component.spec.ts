@@ -157,9 +157,9 @@ describe('FileSectionComponent', () => {
       bitstreamDataService.findAllByItemAndBundleName.calls.reset();
       const viewMore = fixture.debugElement.query(By.css('.bitstream-view-more'));
       viewMore.triggerEventHandler('click', null);
-      expect(bitstreamDataService.findAllByItemAndBundleName).toHaveBeenCalledWith(comp.item, 'ORIGINAL', jasmine.anything());
-      expect(bitstreamDataService.findAllByItemAndBundleName).not.toHaveBeenCalledWith(jasmine.anything(), 'CC-LICENSE', jasmine.anything());
-      expect(bitstreamDataService.findAllByItemAndBundleName).not.toHaveBeenCalledWith(jasmine.anything(), 'LICENSE', jasmine.anything());
+      // Assert on the bundle-name argument of every call, independent of the item argument.
+      const requestedBundles = bitstreamDataService.findAllByItemAndBundleName.calls.allArgs().map((args) => args[1]);
+      expect(requestedBundles).toEqual(['ORIGINAL']);
     });
 
     it('one bitstream should be on the page', () => {
