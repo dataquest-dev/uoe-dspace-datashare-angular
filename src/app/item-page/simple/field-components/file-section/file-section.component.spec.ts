@@ -153,6 +153,8 @@ describe('FileSectionComponent', () => {
     });
 
     it('should fetch only the ORIGINAL bundle, never the licence bundles', () => {
+      // Ignore the ngOnInit call from detectChanges; assert on the click only.
+      bitstreamDataService.findAllByItemAndBundleName.calls.reset();
       const viewMore = fixture.debugElement.query(By.css('.bitstream-view-more'));
       viewMore.triggerEventHandler('click', null);
       expect(bitstreamDataService.findAllByItemAndBundleName).toHaveBeenCalledWith(comp.item, 'ORIGINAL', jasmine.anything());
