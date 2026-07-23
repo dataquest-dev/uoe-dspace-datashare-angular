@@ -4854,6 +4854,8 @@
 
   "submission.general.info.ingesting-from-path-hint": "The file is being read directly from the server. This can take several minutes for a large file, so please keep this tab open.",
 
+  "submission.general.info.upload-from-path-error": "The file could not be read from the server path you entered. Check that it is an absolute path to a file that exists on the server, inside a directory the administrator has allowed, and that it is not a URL, then try saving again.",
+
   "submission.general.save": "Save",
 
   "submission.general.save-later": "Save for later",

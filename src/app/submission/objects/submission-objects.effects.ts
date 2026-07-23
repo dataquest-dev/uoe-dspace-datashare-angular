@@ -39,6 +39,8 @@ import { WorkspaceitemSectionsObject } from '../../core/submission/models/worksp
 import { SubmissionJsonPatchOperationsService } from '../../core/submission/submission-json-patch-operations.service';
 import { SubmissionObjectDataService } from '../../core/submission/submission-object-data.service';
 import { WorkspaceitemDataService } from '../../core/submission/workspaceitem-data.service';
+// DATASHARE - lets a failed save that carried a server-path ingest report an actionable error.
+import { DatashareUploadFromPathService } from '../../datashare/datashare-upload-from-path.service';
 import {
   isEmpty,
   isNotEmpty,
@@ -227,8 +229,20 @@ export class SubmissionObjectEffects {
    */
   saveError$ = createEffect(() => this.actions$.pipe(
     ofType(SubmissionObjectActionTypes.SAVE_SUBMISSION_FORM_ERROR, SubmissionObjectActionTypes.SAVE_SUBMISSION_SECTION_FORM_ERROR),
-    withLatestFrom(this.store$),
-    tap(() => this.notificationsService.error(null, this.translate.get('submission.sections.general.save_error_notice')))), { dispatch: false });
+    // DATASHARE - start
+    // A save that carried a server-path ingest fails for a reason the generic "try again later" notice
+    // cannot convey - a missing path, a URL, or a path outside the allowed directories. The rolled-back
+    // operations still hold the pending value at this point, so we can tell the two apart and give the
+    // administrator something actionable instead. Any other save error keeps the original notice.
+    switchMap((action: SaveSubmissionFormErrorAction | SaveSubmissionSectionFormErrorAction) =>
+      this.uploadFromPathService.isPendingForSubmission(action.payload.submissionId).pipe(
+        take(1),
+        tap((pendingPathIngest: boolean) => this.notificationsService.error(null, this.translate.get(
+          pendingPathIngest
+            ? 'submission.general.info.upload-from-path-error'
+            : 'submission.sections.general.save_error_notice'))))),
+    // DATASHARE - end
+  ), { dispatch: false });
 
   /**
    * Call parseSaveResponse and dispatch actions or dispatch [SaveSubmissionFormErrorAction] on error
@@ -371,6 +385,7 @@ export class SubmissionObjectEffects {
     private submissionObjectService: SubmissionObjectDataService,
     private translate: TranslateService,
     private workspaceItemDataService: WorkspaceitemDataService,
+    private uploadFromPathService: DatashareUploadFromPathService,
   ) {
   }
 
