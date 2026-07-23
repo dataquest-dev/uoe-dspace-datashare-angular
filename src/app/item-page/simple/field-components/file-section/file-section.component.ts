@@ -81,8 +81,9 @@ export class FileSectionComponent implements OnInit {
     @Inject(APP_CONFIG) protected appConfig: AppConfig,
   ) {
     // DATASHARE - start
-    // this.pageSize = this.appConfig.item.bitstream.pageSize;
-    this.pageSize = 25; // DATASHARE - override to 5 (default) as per config.prod.yml
+    // Override the configured page size (item.bitstream.pageSize, default 5) with a larger
+    // value so more files load per "Show more" click. Hard-coded on purpose, not read from config.
+    this.pageSize = 25;
     // DATASHARE - end
   }
 
