@@ -122,9 +122,9 @@ export class FileSectionComponent implements OnInit {
       } else if (hasValue(bitstreamsRD.payload)) {
         const current: Bitstream[] = this.bitstreams$.getValue();
         this.bitstreams$.next([...current, ...bitstreamsRD.payload.page]);
+        this.isLoading = false;
         this.isLastPage = this.currentPage === bitstreamsRD.payload.totalPages;
       }
-      this.isLoading = false; // DATASHARE: also clear on the error branch, upstream leaves it spinning
     });
   }
 }
