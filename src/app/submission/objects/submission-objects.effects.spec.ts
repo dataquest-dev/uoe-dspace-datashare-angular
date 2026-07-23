@@ -30,6 +30,7 @@ import { SubmissionJsonPatchOperationsService } from '../../core/submission/subm
 import { SubmissionObjectDataService } from '../../core/submission/submission-object-data.service';
 import { WorkflowItemDataService } from '../../core/submission/workflowitem-data.service';
 import { WorkspaceitemDataService } from '../../core/submission/workspaceitem-data.service';
+import { DatashareUploadFromPathService } from '../../datashare/datashare-upload-from-path.service';
 import {
   mockSectionsData,
   mockSectionsDataTwo,
@@ -83,6 +84,7 @@ describe('SubmissionObjectEffects test suite', () => {
   let submissionJsonPatchOperationsServiceStub;
   let submissionObjectDataServiceStub;
   let workspaceItemDataService;
+  let uploadFromPathServiceStub;
 
   const collectionId: string = mockSubmissionCollectionId;
   const submissionId: string = mockSubmissionId;
@@ -102,6 +104,10 @@ describe('SubmissionObjectEffects test suite', () => {
 
     workspaceItemDataService = jasmine.createSpyObj('WorkspaceItemDataService', {
       invalidateById: observableOf(true),
+    });
+
+    uploadFromPathServiceStub = jasmine.createSpyObj('DatashareUploadFromPathService', {
+      isPendingForSubmission: observableOf(false),
     });
 
     TestBed.configureTestingModule({
@@ -129,6 +135,7 @@ describe('SubmissionObjectEffects test suite', () => {
         { provide: HALEndpointService, useValue: {} },
         { provide: SubmissionObjectDataService, useValue: submissionObjectDataServiceStub },
         { provide: WorkspaceitemDataService, useValue: workspaceItemDataService },
+        { provide: DatashareUploadFromPathService, useValue: uploadFromPathServiceStub },
       ],
     });
 
@@ -1105,6 +1112,25 @@ describe('SubmissionObjectEffects test suite', () => {
 
       submissionObjectEffects.saveError$.subscribe(() => {
         expect(notificationsServiceStub.error).toHaveBeenCalled();
+      });
+    });
+
+    it('should show the upload-from-path error when the failed save carried a pending path', () => {
+      const translate = TestBed.inject(TranslateService);
+      spyOn(translate, 'get').and.callThrough();
+      uploadFromPathServiceStub.isPendingForSubmission.and.returnValue(observableOf(true));
+      actions = hot('--a-', {
+        a: {
+          type: SubmissionObjectActionTypes.SAVE_SUBMISSION_FORM_ERROR,
+          payload: {
+            submissionId: submissionId,
+          },
+        },
+      });
+
+      submissionObjectEffects.saveError$.subscribe(() => {
+        expect(notificationsServiceStub.error).toHaveBeenCalled();
+        expect(translate.get).toHaveBeenCalledWith('submission.general.info.upload-from-path-error');
       });
     });
   });
