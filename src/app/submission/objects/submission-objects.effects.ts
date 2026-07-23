@@ -230,10 +230,9 @@ export class SubmissionObjectEffects {
   saveError$ = createEffect(() => this.actions$.pipe(
     ofType(SubmissionObjectActionTypes.SAVE_SUBMISSION_FORM_ERROR, SubmissionObjectActionTypes.SAVE_SUBMISSION_SECTION_FORM_ERROR),
     // DATASHARE - start
-    // A save that carried a server-path ingest fails for a reason the generic "try again later" notice
-    // cannot convey - a missing path, a URL, or a path outside the allowed directories. The rolled-back
-    // operations still hold the pending value at this point, so we can tell the two apart and give the
-    // administrator something actionable instead. Any other save error keeps the original notice.
+    // A save carrying a server-path ingest can fail for a reason the generic notice cannot convey (bad
+    // path, URL, or outside the allowed dirs). The rolled-back operations still hold the value, so we can
+    // detect that case and show an actionable error; any other save error keeps the original notice.
     switchMap((action: SaveSubmissionFormErrorAction | SaveSubmissionSectionFormErrorAction) =>
       this.uploadFromPathService.isPendingForSubmission(action.payload.submissionId).pipe(
         take(1),

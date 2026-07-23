@@ -88,8 +88,7 @@ export class SubmissionFormFooterComponent implements OnChanges {
 
   // DATASHARE - start
   /**
-   * A boolean representing if the save being run will make the server ingest a file from its own
-   * filesystem. While a save is running this is the value latched when that save was dispatched
+   * Whether the running save will make the server ingest a file; latched while a save runs.
    * @type {Observable<boolean>}
    */
   public pathIngestPending$: Observable<boolean> = observableOf(false);
@@ -137,9 +136,8 @@ export class SubmissionFormFooterComponent implements OnChanges {
 
       // DATASHARE - start
       const livePathIngestPending$ = this.uploadFromPathService.isPendingForSubmission(this.submissionId);
-      // A save carries the operations that were pending when it was dispatched, so once one is running
-      // its state has to be latched: read live, the label would describe a body that has already gone,
-      // or miss a path that went with it. While nothing is being saved the live value is all there is.
+      // A running save must latch its pending state: read live, the label would track a body already
+      // gone. While nothing is saving, the live value is all there is.
       this.pathIngestPending$ = this.processingSaveStatus.pipe(
         distinctUntilChanged(),
         switchMap((saving: boolean) => saving ? livePathIngestPending$.pipe(take(1)) : livePathIngestPending$),
@@ -149,17 +147,15 @@ export class SubmissionFormFooterComponent implements OnChanges {
         map((pending: boolean) => pending ? INGESTING_FROM_PATH_MESSAGE_KEY : SAVING_MESSAGE_KEY),
         distinctUntilChanged(),
       );
-      // The ingest runs inside the save request, so no byte-level progress is available: all we can
-      // honestly report is that the save is still running and for how long.
+      // The ingest runs inside the save request, so only elapsed time (not byte progress) is available.
       this.elapsed$ = this.processingSaveStatus.pipe(
         distinctUntilChanged(),
         switchMap((saving: boolean) => {
           if (!saving) {
             return observableOf('');
           }
-          // Measured against the clock rather than counted in timer emissions: browsers throttle
-          // timers in a backgrounded tab to roughly one tick a minute, which is exactly where a long
-          // ingest is left running, and counting ticks would then report a small fraction of the wait.
+          // Measured against the clock, not counted ticks: backgrounded tabs throttle timers to ~1/min,
+          // so counting ticks would under-report a long ingest's elapsed time.
           const startedAt: number = Date.now();
           return timer(0, 1000).pipe(map(() => this.formatElapsed(Date.now() - startedAt)));
         }),
@@ -204,14 +200,12 @@ export class SubmissionFormFooterComponent implements OnChanges {
 
   // DATASHARE - start
   /**
-   * Render a duration as mm:ss, letting the minutes run past 59 so that an ingest of over an hour
-   * reads as "72:15" instead of wrapping round to a time it has already shown
+   * Render a duration as mm:ss, letting the minutes run past 59 so an hour-plus ingest reads as "72:15".
    *
    * @param elapsedMillis the milliseconds since the running save started
    */
   private formatElapsed(elapsedMillis: number): string {
-    // The clock can step backwards (a manual change, an NTP correction), and a negative count would
-    // be more alarming than a stalled one.
+    // Clamp at 0: the clock can step backwards (manual change, NTP), and a negative count would alarm.
     const elapsedSeconds = Math.max(0, Math.floor(elapsedMillis / 1000));
     const minutes = Math.floor(elapsedSeconds / 60);
     const seconds = elapsedSeconds % 60;

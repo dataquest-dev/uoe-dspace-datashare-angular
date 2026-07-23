@@ -30,18 +30,10 @@ import { SubmissionService } from '../submission/submission.service';
 const SECTIONS_RESOURCE_TYPE = 'sections';
 
 /**
- * Tells the submission UI whether the next (or currently running) save will make the server ingest a
- * bitstream from a path on its own filesystem, so that the user can be shown an honest long-running
- * indicator instead of the ordinary "Saving" one.
- *
- * The value is read from two places, because neither on its own covers the whole window during which
- * the indicator has to be shown:
- * <ul>
- *   <li>the unsaved JSON PATCH operations, which hold the path from the moment it is typed until the
- *       PATCH response arrives — this is the window in which the ingest actually happens;</li>
- *   <li>the submission object in the store, whose section data only ever holds server-supplied values,
- *       and therefore only carries the path if a previous ingest did not clear it.</li>
- * </ul>
+ * Tells the submission UI whether the next (or running) save will make the server ingest a bitstream
+ * from a server path, so a long-running indicator can be shown instead of the ordinary "Saving" one.
+ * Read from two places: the unsaved JSON PATCH operations (the path from when it is typed until the
+ * response) and the submission object's section data (a path a previous ingest did not clear).
  */
 @Injectable({
   providedIn: 'root',
@@ -58,8 +50,7 @@ export class DatashareUploadFromPathService {
   }
 
   /**
-   * Emits true while the given submission carries a non-empty {@link PATH_FIELD} value, either
-   * already saved on the server or waiting in an unsaved JSON PATCH operation.
+   * Emits true while the submission carries a non-empty {@link PATH_FIELD} value, saved or pending.
    *
    * @param submissionId the id of the submission being edited
    * @return an observable that emits only when the pending state changes
@@ -75,9 +66,8 @@ export class DatashareUploadFromPathService {
 
     return observableCombineLatest([sections$, operations$]).pipe(
       map(([sections, operations]: [SubmissionSectionEntry, JsonPatchOperationsResourceEntry]) => {
-        // Section data is only ever refreshed from a server response, so it still holds the old value
-        // while the user is clearing the field. A pending operation therefore has the final say, and
-        // the saved value is consulted only when nothing pending touches the field at all.
+        // Section data lags behind (server-refreshed only), so a pending operation has the final say;
+        // the saved value is consulted only when nothing pending touches the field.
         const pending: boolean | undefined = this.pendingOutcome(sections, operations);
         return hasValue(pending) ? pending : this.isInSectionData(sections);
       }),
@@ -98,15 +88,12 @@ export class DatashareUploadFromPathService {
   }
 
   /**
-   * What do the unsaved JSON PATCH operations of the submission do to the path field?
-   *
-   * The JSON PATCH state is keyed by section id only, so it is scoped back to the submission by
-   * keeping just the sections the submission actually owns.
+   * What do the unsaved JSON PATCH operations do to the path field? Scoped back to the submission by
+   * keeping only the sections it owns, since the JSON PATCH state is keyed by section id alone.
    *
    * @param sections   the submission's sections as held in the store
    * @param operations the JSON PATCH operations pending for every submission section
-   * @return true when they leave a non-blank path, false when they clear it, and undefined when
-   *         nothing pending touches the field
+   * @return true when they leave a non-blank path, false when they clear it, undefined when untouched
    */
   private pendingOutcome(sections: SubmissionSectionEntry, operations: JsonPatchOperationsResourceEntry): boolean | undefined {
     if (!hasValue(operations) || !hasValue(operations.children)) {
@@ -125,14 +112,11 @@ export class DatashareUploadFromPathService {
 
   /**
    * Replay a section's pending operations in order and report the state the path field is left in.
-   *
-   * The operations have to be folded rather than tested one by one: a user who types a path and then
-   * clears the field again leaves both the add and the remove in the body, and only the last of them
-   * describes what the save will send.
+   * Folded, not tested one by one, because only the last operation touching the field describes the save.
    *
    * @param body the section's pending JSON PATCH operations, in the order they were dispatched
-   * @return true when the last operation touching the path field leaves a non-blank value, false when
-   *         it clears it, and undefined when no operation touches the field
+   * @return true when the last operation on the path field leaves a non-blank value, false when it clears
+   *         it, undefined when no operation touches the field
    */
   private pathOutcome(body: JsonPatchOperationObject[]): boolean | undefined {
     return body.reduce((leftBehind: boolean | undefined, entry: JsonPatchOperationObject) => {
@@ -157,7 +141,7 @@ export class DatashareUploadFromPathService {
     if (!hasValue(path)) {
       return false;
     }
-    // Paths are '/sections/<sectionId>/<field>' for a whole field and '/sections/<sectionId>/<field>/<index>' for one value.
+    // Path is '/sections/<sectionId>/<field>' or '/sections/<sectionId>/<field>/<index>'.
     return path.split('/')[3] === DatashareUploadFromPathService.PATH_FIELD;
   }
 
