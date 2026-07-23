@@ -78,7 +78,7 @@ export class DatashareUploadFromPathService {
         // Section data is only ever refreshed from a server response, so it still holds the old value
         // while the user is clearing the field. A pending operation therefore has the final say, and
         // the saved value is consulted only when nothing pending touches the field at all.
-        const pending: boolean = this.pendingOutcome(sections, operations);
+        const pending: boolean | undefined = this.pendingOutcome(sections, operations);
         return hasValue(pending) ? pending : this.isInSectionData(sections);
       }),
       distinctUntilChanged(),
@@ -108,14 +108,14 @@ export class DatashareUploadFromPathService {
    * @return true when they leave a non-blank path, false when they clear it, and undefined when
    *         nothing pending touches the field
    */
-  private pendingOutcome(sections: SubmissionSectionEntry, operations: JsonPatchOperationsResourceEntry): boolean {
+  private pendingOutcome(sections: SubmissionSectionEntry, operations: JsonPatchOperationsResourceEntry): boolean | undefined {
     if (!hasValue(operations) || !hasValue(operations.children)) {
       return undefined;
     }
     const outcomes: boolean[] = Object.keys(operations.children)
       .filter((sectionId: string) => hasValue(sections[sectionId]))
       .map((sectionId: string) => this.pathOutcome(operations.children[sectionId]?.body ?? []))
-      .filter((outcome: boolean) => hasValue(outcome));
+      .filter((outcome: boolean | undefined): outcome is boolean => hasValue(outcome));
 
     if (outcomes.length === 0) {
       return undefined;
@@ -134,8 +134,8 @@ export class DatashareUploadFromPathService {
    * @return true when the last operation touching the path field leaves a non-blank value, false when
    *         it clears it, and undefined when no operation touches the field
    */
-  private pathOutcome(body: JsonPatchOperationObject[]): boolean {
-    return body.reduce((leftBehind: boolean, entry: JsonPatchOperationObject) => {
+  private pathOutcome(body: JsonPatchOperationObject[]): boolean | undefined {
+    return body.reduce((leftBehind: boolean | undefined, entry: JsonPatchOperationObject) => {
       if (!this.isPathFieldOperation(entry)) {
         return leftBehind;
       }
