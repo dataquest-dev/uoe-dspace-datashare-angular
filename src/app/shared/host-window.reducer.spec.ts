@@ -22,12 +22,16 @@ describe('hostWindowReducer', () => {
     expect(newState).toEqual(state);
   });
 
-  it('should start with width = null and height = null', () => {
+  it('should start with a desktop default width and height (so SSR renders the desktop layout)', () => {
+    // The initial width/height default to a desktop viewport so responsive components render their
+    // desktop branch during SSR, matching the common (desktop) client hydration and avoiding a
+    // layout shift on load. The browser overrides these with the real window size immediately
+    // (see StoreEffects.resize / AppComponent).
     const action = new NullAction();
     const initialState = hostWindowReducer(undefined, action);
 
-    expect(initialState.width).toEqual(null);
-    expect(initialState.height).toEqual(null);
+    expect(initialState.width).toEqual(1200);
+    expect(initialState.height).toEqual(800);
   });
 
   it('should update the width and height in the state in response to a RESIZE action', () => {

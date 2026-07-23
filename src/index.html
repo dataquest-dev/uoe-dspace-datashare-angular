@@ -7,10 +7,29 @@
   <title>DSpace</title>
   <meta name="viewport" content="width=device-width,minimum-scale=1">
   <meta http-equiv="cache-control" content="no-store">
+  <style>
+    /* Anti-flicker overlay: a detached clone of the settled page painted on top while Angular
+       re-renders underneath. See the bootstrap script in <body> for why it is needed. */
+    #__dspace_ssr_overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #fff;
+      overflow: hidden;
+      /* Never absorb input. `inert` stops the dead clone taking focus, but it does not let a click
+         through to the live app underneath - it swallows it, leaving the whole page unresponsive for
+         as long as the mask is up. The mask also lifts on the first interaction, so the user sees the
+         result of the click they just made rather than a frozen picture of the previous page. */
+      pointer-events: none;
+    }
+  </style>
 </head>
 
 <body>
   <ds-app></ds-app>
+<!-- ANTI_FLICKER_OVERLAY: the anti-flicker bootstrap (src/anti-flicker-overlay.js) is inlined here
+     as a synchronous <script> at build time by webpack/index-html-transform.ts. It must be inline and
+     run before the deferred module bundles, so it cannot live in the Angular app. See that file. -->
 </body>
 
 <!-- do not include client bundle, it is injected with Zone already loaded -->
