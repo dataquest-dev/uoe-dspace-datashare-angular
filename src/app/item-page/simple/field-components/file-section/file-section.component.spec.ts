@@ -152,6 +152,16 @@ describe('FileSectionComponent', () => {
       expect(bitstreamDataService.findAllByItemAndBundleName).toHaveBeenCalled();
     });
 
+    it('should fetch only the ORIGINAL bundle, never the licence bundles', () => {
+      // Ignore the ngOnInit call from detectChanges; assert on the click only.
+      bitstreamDataService.findAllByItemAndBundleName.calls.reset();
+      const viewMore = fixture.debugElement.query(By.css('.bitstream-view-more'));
+      viewMore.triggerEventHandler('click', null);
+      // Assert on the bundle-name argument of every call, independent of the item argument.
+      const requestedBundles = bitstreamDataService.findAllByItemAndBundleName.calls.allArgs().map((args) => args[1]);
+      expect(requestedBundles).toEqual(['ORIGINAL']);
+    });
+
     it('one bitstream should be on the page', () => {
       const viewMore = fixture.debugElement.query(By.css('.bitstream-view-more'));
       viewMore.triggerEventHandler('click', null);
@@ -169,8 +179,7 @@ describe('FileSectionComponent', () => {
       });
       it('should contain another bitstream', () => {
         const fileDownloadLink = fixture.debugElement.queryAll(By.css('ds-file-download-link'));
-        // DATASHARE: getNextPage() fetches both ORIGINAL and CC-LICENSE bundles
-        expect(fileDownloadLink.length).toEqual(3);
+        expect(fileDownloadLink.length).toEqual(2);
       });
     });
   });

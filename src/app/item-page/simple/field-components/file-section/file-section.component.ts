@@ -33,6 +33,11 @@ import { VarDirective } from '../../../../shared/utils/var.directive';
 /**
  * This component renders the file section of the item
  * inside a 'ds-metadata-field-wrapper' component.
+ *
+ * It lists the ORIGINAL bundle only. Licence bundles (CC-LICENSE / LICENSE) are the
+ * responsibility of the theme: the datashare theme renders them in a separate "Licences"
+ * section. Do not fetch them here - they have far fewer pages than ORIGINAL, so paging them
+ * in lockstep would request a page past their end and the REST API would return 500.
  */
 @Component({
   selector: 'ds-base-item-page-file-section',
@@ -76,8 +81,9 @@ export class FileSectionComponent implements OnInit {
     @Inject(APP_CONFIG) protected appConfig: AppConfig,
   ) {
     // DATASHARE - start
-    // this.pageSize = this.appConfig.item.bitstream.pageSize;
-    this.pageSize = 25; // DATASHARE - override to 5 (default) as per config.prod.yml
+    // Override the configured page size (item.bitstream.pageSize, default 5) with a larger
+    // value so more files load per "Show more" click. Hard-coded on purpose, not read from config.
+    this.pageSize = 25;
     // DATASHARE - end
   }
 
@@ -110,44 +116,11 @@ export class FileSectionComponent implements OnInit {
       this.currentPage++;
     }
 
-    // DATASHARE -start
-    // Rewritten to make two separate calls to get both ORIGINAL and CC-LICENSE bitstreams
-    // and combine them into the same bitstreams$ observable
-    // Previous code:
-    //   this.bitstreamDataService.findAllByItemAndBundleName(this.item, 'ORIGINAL', {
-    //     currentPage: this.currentPage,
-    //     elementsPerPage: this.pageSize,
-    //   }).pipe(
-    //     getFirstCompletedRemoteData(),
-    //   ).subscribe((bitstreamsRD: RemoteData<PaginatedList<Bitstream>>) => {
-    //     if (bitstreamsRD.errorMessage) {
-    //       this.notificationsService.error(this.translateService.get('file-section.error.header'), `${bitstreamsRD.statusCode} ${bitstreamsRD.errorMessage}`);
-    //     } else if (hasValue(bitstreamsRD.payload)) {
-    //       const current: Bitstream[] = this.bitstreams$.getValue();
-    //       // DATASHARE -start
-    //       // Console log bitstreams for easy debugging
-    //       bitstreamsRD.payload.page.forEach(bitstream => {
-    //         console.log('Bitstream:', bitstream);
-    //       });
-    //       // DATASHARE - end
-    //       this.bitstreams$.next([...current, ...bitstreamsRD.payload.page]);
-    //       this.isLoading = false;
-    //       this.isLastPage = this.currentPage === bitstreamsRD.payload.totalPages;
-    //     }
-    //   });
-    // }
-    // Replaced code:
-    const original$ = this.bitstreamDataService.findAllByItemAndBundleName(this.item, 'ORIGINAL', {
+    // CC-LICENSE/LICENSE come from the datashare theme's own Licences section - don't fetch them here.
+    this.bitstreamDataService.findAllByItemAndBundleName(this.item, 'ORIGINAL', {
       currentPage: this.currentPage,
       elementsPerPage: this.pageSize,
-    });
-
-    const license$ = this.bitstreamDataService.findAllByItemAndBundleName(this.item, 'CC-LICENSE', {
-      currentPage: this.currentPage,
-      elementsPerPage: this.pageSize,
-    });
-
-    original$.pipe(
+    }).pipe(
       getFirstCompletedRemoteData(),
     ).subscribe((bitstreamsRD: RemoteData<PaginatedList<Bitstream>>) => {
       if (bitstreamsRD.errorMessage) {
@@ -157,21 +130,6 @@ export class FileSectionComponent implements OnInit {
         this.bitstreams$.next([...current, ...bitstreamsRD.payload.page]);
         this.isLoading = false;
         this.isLastPage = this.currentPage === bitstreamsRD.payload.totalPages;
-        // Now subscribe to license$
-        license$.pipe(
-          getFirstCompletedRemoteData(),
-        ).subscribe((licenseRD: RemoteData<PaginatedList<Bitstream>>) => {
-          if (licenseRD.errorMessage) {
-            this.notificationsService.error(this.translateService.get('file-section.error.header'), `${licenseRD.statusCode} ${licenseRD.errorMessage}`);
-          } else if (hasValue(licenseRD.payload)) {
-            const updated: Bitstream[] = this.bitstreams$.getValue();
-            this.bitstreams$.next([...updated, ...licenseRD.payload.page]);
-          }
-          this.isLoading = false;
-        });
-
-      } else {
-        this.isLoading = false;
       }
     });
   }
