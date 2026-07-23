@@ -546,22 +546,3 @@ ngb-accordion {
   // We use underline to discern link from text as we can't make color lighter on a white bg
   text-decoration: underline;
 }
-
-// Admin-sidebar entrance on login. The auth effect flags a genuine login; the anti-flicker overlay
-// adds `.ds-login-sidebar-anim` to <body> as it lifts (never on a plain reload). We animate the fixed
-// sidebar's transform only — the page content and its reserved gutter do not move, so this cannot
-// reintroduce the reload content-shift. Prefers-reduced-motion users get no animation.
-@keyframes ds-login-sidebar-slide-in {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
-}
-
-body.ds-login-sidebar-anim #admin-sidebar {
-  animation: ds-login-sidebar-slide-in 320ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  body.ds-login-sidebar-anim #admin-sidebar {
-    animation: none;
-  }
-}

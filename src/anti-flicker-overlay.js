@@ -30,7 +30,6 @@
   if (typeof navigator !== 'undefined' && navigator.webdriver) { return; }
 
   var STORE_KEY = '__dspace_ssr_frame';
-  var LOGIN_ANIM_KEY = 'ds-login-sidebar-anim'; // one-shot flag set by the auth effect on a real login
   var OVERLAY_ID = '__dspace_ssr_overlay';
   var MIN_CONTENT_HEIGHT = 200; // px: proves #main-content is no longer the d-none'd / empty shell
   var MASK_MAX_MS = 15000;      // absolute cap per mask -- never trap the user behind a frozen frame
@@ -134,33 +133,7 @@
     el._dsFading = true;
     el.style.transition = 'opacity 150ms ease-out';
     el.style.opacity = '0';
-    setTimeout(function () {
-      if (el && el.parentNode) { el.parentNode.removeChild(el); }
-      // Play the login entrance only once the mask is gone AND stays gone: login redirects through
-      // /reload -> /home with several mask/reveal cycles, so an earlier transient reveal must not
-      // consume the one-shot flag before the final, visible reveal. A short grace with no re-mask is
-      // the "this reveal stuck" signal.
-      setTimeout(maybePlayLoginSidebarEntrance, 250);
-    }, 200);
-  }
-
-  // Slide the admin sidebar into its already-reserved gutter after a genuine login (flag set by the
-  // auth effect). The animation is a transform on the fixed sidebar, so the page content never moves --
-  // this is not the gutter shift, and it only ever runs on login (one-shot flag, absent on a reload).
-  // Skips (without consuming the flag) unless the page is really settled: no overlay, admin sidebar
-  // present, routed content painted. Driven by a body class + CSS keyframes.
-  function maybePlayLoginSidebarEntrance() {
-    if (document.getElementById(OVERLAY_ID)) { return; }        // re-masked -> this reveal did not stick
-    if (!document.getElementById('admin-sidebar')) { return; }  // not the logged-in page yet
-    if (!contentPainted()) { return; }
-    var flagged = false;
-    try {
-      flagged = sessionStorage.getItem(LOGIN_ANIM_KEY) === '1';
-      if (flagged) { sessionStorage.removeItem(LOGIN_ANIM_KEY); }
-    } catch (e) { return; } // storage disabled
-    if (!flagged) { return; }
-    document.body.classList.add('ds-login-sidebar-anim');
-    setTimeout(function () { document.body.classList.remove('ds-login-sidebar-anim'); }, 600);
+    setTimeout(function () { if (el && el.parentNode) { el.parentNode.removeChild(el); } }, 200);
   }
 
   // The moment the user interacts, drop the mask: their click already went through to the live app

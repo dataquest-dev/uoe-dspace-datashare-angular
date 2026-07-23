@@ -145,12 +145,6 @@ export class AuthEffects {
   public redirectAfterLoginSuccess$: Observable<Action> = createEffect(() => this.actions$.pipe(
     ofType(AuthActionTypes.REDIRECT_AFTER_LOGIN_SUCCESS),
     tap((action: RedirectAfterLoginSuccessAction) => {
-      // Flag a genuine login (fires once here, never on a plain reload) so the anti-flicker overlay can
-      // play the admin-sidebar entrance when it lifts on the /home the redirect lands on. One-shot: the
-      // overlay clears it. Guarded because this effect also runs under SSR, where sessionStorage is absent.
-      try {
-        sessionStorage.setItem('ds-login-sidebar-anim', '1');
-      } catch (e) { /* SSR / storage disabled — the entrance is a browser-only nicety */ }
       this.authService.clearRedirectUrl();
       this.authService.navigateToRedirectUrl(action.payload);
     }),
