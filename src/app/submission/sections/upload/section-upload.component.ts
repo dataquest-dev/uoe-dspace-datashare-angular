@@ -154,12 +154,6 @@ export class SubmissionSectionUploadComponent extends SectionModelComponent {
   // DATASHARE - Start
   public totalUploadedFilesSize = 0;
   public isTotalUploadedFilesSizeExceeded = false;
-
-  // Duplicate file name detector from service
-  private duplicateDetector = this.datashareSubmissionService.createDuplicateFileNameDetector();
-  public fileNamesSignal = this.duplicateDetector.fileNamesSignal;
-  // Use the service signal instead
-  public hasUploadFilesErrorsSignal = this.duplicateDetector.hasUploadFilesErrorsSignal;
   // DATASHARE - End
 
 
@@ -262,15 +256,6 @@ export class SubmissionSectionUploadComponent extends SectionModelComponent {
         this.totalUploadedFilesSize = this.datashareSubmissionService.calculateTotalUploadedFilesSize(files);
         // Has the total uploaded files size exceeded the limit?
         this.isTotalUploadedFilesSizeExceeded = this.datashareSubmissionService.isTotalUploadedFilesSizeExceeded(this.totalUploadedFilesSize);
-
-        // Update the duplicate detector
-        this.duplicateDetector.updateFileNames(this.fileNames);
-
-        // IMPORTANT: Update the shared service signal
-        const hasDuplicates = this.datashareSubmissionService.getDuplicateFileNames(this.fileNames).length > 0;
-
-        // Update the service signal
-        this.datashareSubmissionService.updatehasUploadFilesErrors(!hasDuplicates || this.isTotalUploadedFilesSizeExceeded);
         // DATASHARE - end
         this.changeDetectorRef.detectChanges();
       }),
@@ -328,35 +313,6 @@ export class SubmissionSectionUploadComponent extends SectionModelComponent {
    */
   formatBytes(bytes: number): string {
     return this.datashareSubmissionService.formatBytes(bytes);
-  }
-
-  /**
-   * Get duplicate file names from the fileNames array
-   * @returns {string[]} Array of duplicate file names
-   */
-  getDuplicateFileNames(): string[] {
-    return this.duplicateDetector.getDuplicates();
-  }
-
-  /**
-   * Get duplicate file names as a formatted string
-   */
-  get duplicateFileNamesDisplay(): string {
-    return this.duplicateDetector.getDuplicateFileNamesDisplay();
-  }
-
-  /**
-   * Get duplicate file names from signal (using service)
-   */
-  private getDuplicateFileNamesFromSignal(): string[] {
-    return this.duplicateDetector.getDuplicates();
-  }
-
-  // Update wherever you currently update the duplicate detector
-  private updateDepositButtonState(): void {
-    const hasDuplicates = this.getDuplicateFileNames().length > 0;
-    this.isTotalUploadedFilesSizeExceeded = this.datashareSubmissionService.isTotalUploadedFilesSizeExceeded(this.totalUploadedFilesSize);
-    this.datashareSubmissionService.updatehasUploadFilesErrors(!hasDuplicates || this.isTotalUploadedFilesSizeExceeded);
   }
   // DATASHARE - end
 

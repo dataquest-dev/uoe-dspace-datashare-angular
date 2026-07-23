@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  computed,
   Input,
   OnChanges,
   SimpleChanges,
@@ -22,7 +21,6 @@ import {
 
 import { SubmissionRestService } from '../../../core/submission/submission-rest.service';
 import { SubmissionScopeType } from '../../../core/submission/submission-scope-type';
-import { DatashareSubmissionService } from '../../../datashare/datashare-submission.service';
 import { DatashareUploadFromPathService } from '../../../datashare/datashare-upload-from-path.service';
 import { BtnDisabledDirective } from '../../../shared/btn-disabled.directive';
 import { isNotEmpty } from '../../../shared/empty.util';
@@ -88,16 +86,7 @@ export class SubmissionFormFooterComponent implements OnChanges {
    */
   public hasUnsavedModification: Observable<boolean>;
 
-  // DATASHARE - Start
-  // Signal access
-  public  hasUploadFileErrorsSignal = this.datashareSubmissionService.hasUploadFilesErrorsSignal;
-
-  // Optional: Create a computed signal for more complex logic
-  public hasUploadFileErrors = computed(() => {
-    // Combine the signal with other conditions if needed
-    return this.hasUploadFileErrorsSignal();
-  });
-
+  // DATASHARE - start
   /**
    * A boolean representing if the save being run will make the server ingest a file from its own
    * filesystem. While a save is running this is the value latched when that save was dispatched
@@ -116,6 +105,7 @@ export class SubmissionFormFooterComponent implements OnChanges {
    * @type {Observable<string>}
    */
   public elapsed$: Observable<string> = observableOf('');
+  // DATASHARE - end
 
   /**
    * Initialize instance variables
@@ -123,16 +113,13 @@ export class SubmissionFormFooterComponent implements OnChanges {
    * @param {NgbModal} modalService
    * @param {SubmissionRestService} restService
    * @param {SubmissionService} submissionService
-   * @param {DatashareSubmissionService} datashareSubmissionService
    * @param {DatashareUploadFromPathService} uploadFromPathService
    */
   constructor(private modalService: NgbModal,
               private restService: SubmissionRestService,
               private submissionService: SubmissionService,
-              private datashareSubmissionService: DatashareSubmissionService,
               private uploadFromPathService: DatashareUploadFromPathService) {
   }
-  // DATASHARE - End
 
   /**
    * Initialize all instance variables
@@ -199,12 +186,6 @@ export class SubmissionFormFooterComponent implements OnChanges {
    * Dispatch a submission deposit action
    */
   public deposit(event) {
-    // DATASHARE - start
-    if (!this.hasUploadFileErrors()) {
-      this.datashareSubmissionService.sendCannotSubmitNotification();
-      return;
-    }
-    // DATASHARE - end
     this.submissionService.dispatchDeposit(this.submissionId);
   }
 

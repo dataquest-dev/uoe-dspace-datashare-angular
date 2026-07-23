@@ -2,7 +2,6 @@ import {
   ChangeDetectorRef,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
-  signal,
   SimpleChange,
 } from '@angular/core';
 import {
@@ -32,7 +31,6 @@ import {
 import { TestScheduler } from 'rxjs/testing';
 
 import { SubmissionRestService } from '../../../core/submission/submission-rest.service';
-import { DatashareSubmissionService } from '../../../datashare/datashare-submission.service';
 import { DatashareUploadFromPathService } from '../../../datashare/datashare-upload-from-path.service';
 import { BtnDisabledDirective } from '../../../shared/btn-disabled.directive';
 import { mockSubmissionId } from '../../../shared/mocks/submission.mock';
@@ -45,10 +43,6 @@ import { SubmissionFormFooterComponent } from './submission-form-footer.componen
 const submissionServiceStub: SubmissionServiceStub = new SubmissionServiceStub();
 
 const submissionId = mockSubmissionId;
-
-const mockDatashareSubmissionService = {
-  hasUploadFilesErrorsSignal: signal(true),
-};
 
 const pathIngestPending$ = new BehaviorSubject<boolean>(false);
 
@@ -76,7 +70,6 @@ describe('SubmissionFormFooterComponent', () => {
       providers: [
         { provide: SubmissionService, useValue: submissionServiceStub },
         { provide: SubmissionRestService, useClass: SubmissionRestServiceStub },
-        { provide: DatashareSubmissionService, useValue: mockDatashareSubmissionService },
         { provide: DatashareUploadFromPathService, useValue: mockDatashareUploadFromPathService },
         ChangeDetectorRef,
         NgbModal,
