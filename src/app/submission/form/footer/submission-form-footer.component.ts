@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import {
   Component,
-  computed,
   Input,
   OnChanges,
   SimpleChanges,
@@ -16,7 +15,6 @@ import { map } from 'rxjs/operators';
 
 import { SubmissionRestService } from '../../../core/submission/submission-rest.service';
 import { SubmissionScopeType } from '../../../core/submission/submission-scope-type';
-import { DatashareSubmissionService } from '../../../datashare/datashare-submission.service';
 import { BtnDisabledDirective } from '../../../shared/btn-disabled.directive';
 import { isNotEmpty } from '../../../shared/empty.util';
 import { BrowserOnlyPipe } from '../../../shared/utils/browser-only.pipe';
@@ -69,31 +67,17 @@ export class SubmissionFormFooterComponent implements OnChanges {
    */
   public hasUnsavedModification: Observable<boolean>;
 
-  // DATASHARE - Start
-  // Signal access
-  public  hasUploadFileErrorsSignal = this.datashareSubmissionService.hasUploadFilesErrorsSignal;
-
-  // Optional: Create a computed signal for more complex logic
-  public hasUploadFileErrors = computed(() => {
-    // Combine the signal with other conditions if needed
-    return this.hasUploadFileErrorsSignal();
-  });
-
-
   /**
    * Initialize instance variables
    *
    * @param {NgbModal} modalService
    * @param {SubmissionRestService} restService
    * @param {SubmissionService} submissionService
-   * @param {DatashareSubmissionService} datashareSubmissionService
    */
   constructor(private modalService: NgbModal,
               private restService: SubmissionRestService,
-              private submissionService: SubmissionService,
-              private datashareSubmissionService: DatashareSubmissionService) {
+              private submissionService: SubmissionService) {
   }
-  // DATASHARE - End
 
   /**
    * Initialize all instance variables
@@ -129,12 +113,6 @@ export class SubmissionFormFooterComponent implements OnChanges {
    * Dispatch a submission deposit action
    */
   public deposit(event) {
-    // DATASHARE - start
-    if (!this.hasUploadFileErrors()) {
-      this.datashareSubmissionService.sendCannotSubmitNotification();
-      return;
-    }
-    // DATASHARE - end
     this.submissionService.dispatchDeposit(this.submissionId);
   }
 

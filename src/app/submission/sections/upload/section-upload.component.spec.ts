@@ -3,7 +3,6 @@ import {
   ChangeDetectorRef,
   Component,
   NO_ERRORS_SCHEMA,
-  signal,
 } from '@angular/core';
 import {
   ComponentFixture,
@@ -55,20 +54,9 @@ import { SubmissionSectionUploadComponent } from './section-upload.component';
 import { SectionUploadService } from './section-upload.service';
 
 const mockDatashareSubmissionService = {
-  hasUploadFilesErrorsSignal: signal(false),
-  updatehasUploadFilesErrors: jasmine.createSpy('updatehasUploadFilesErrors'),
   calculateTotalUploadedFilesSize: jasmine.createSpy('calculateTotalUploadedFilesSize').and.returnValue(0),
   isTotalUploadedFilesSizeExceeded: jasmine.createSpy('isTotalUploadedFilesSizeExceeded').and.returnValue(false),
   formatBytes: jasmine.createSpy('formatBytes').and.returnValue('0 Bytes'),
-  getDuplicateFileNames: jasmine.createSpy('getDuplicateFileNames').and.returnValue([]),
-  createDuplicateFileNameDetector: jasmine.createSpy('createDuplicateFileNameDetector').and.returnValue({
-    fileNamesSignal: signal<string[]>([]),
-    hasUploadFilesErrorsSignal: signal(false),
-    updateFileNames: jasmine.createSpy('updateFileNames'),
-    getDuplicates: jasmine.createSpy('getDuplicates').and.returnValue([]),
-    getDuplicateFileNamesDisplay: jasmine.createSpy('getDuplicateFileNamesDisplay').and.returnValue(''),
-  }),
-  sendCannotSubmitNotification: jasmine.createSpy('sendCannotSubmitNotification'),
 };
 
 function getMockSubmissionUploadsConfigService(): SubmissionFormsConfigDataService {
