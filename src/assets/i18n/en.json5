@@ -7024,10 +7024,6 @@
 
   "datashare.submission.sections.upload.total_size": "Total Size of Uploaded Files:",
 
-  "datashare.submission.sections.upload.duplicates": "You have files with same name. Please rename or delete:",
-
-  "datashare.submission.sections.upload.submit.errors": "You have errors. Please fix them before submitting.",
-
   "item.page.filesection.cclicense.bundle": "CC-License bundle",
 
   "item.page.filesection.licences": "Licences",

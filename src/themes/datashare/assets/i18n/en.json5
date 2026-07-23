@@ -29,8 +29,6 @@
   "datashare.submission.sections.upload.info": "If you wish to create a deposit of between 20 GB and 100 GB please contact the Research Data Service to arrange a batch import on <a href='mailto:data-support@64;ed.ac.uk'>data-support@ed.ac.uk</a>.",
   "datashare.submission.sections.upload.exceeded_size_limit": "You have exceeded the maximum upload size of 20 GB. Please delete some files to proceed to the next step.",
   "datashare.submission.sections.upload.total_size": "Total Size of Uploaded Files:",
-  "datashare.submission.sections.upload.duplicates": "You have files with same name. Please rename or delete:",
-  "datashare.submission.sections.upload.submit.errors": "You have errors. Please fix them before submitting.",
 
   "item.page.date.available": "Date Available",
   "item.page.type": "Type",
