@@ -49,6 +49,7 @@
       </button>
       <button class="dropdown-item collection-item text-truncate" *ngFor="let listEntry of optionsList; let i = index"
               [class.active]="i === selectedIndex"
+              [attr.aria-selected]="inputFormatter(listEntry) === (currentValue | async)"
               [dsBtnDisabled]="isOptionDisabled(listEntry)"
               (keydown.enter)="selectEntry(listEntry, sdRef)" (mousedown)="selectEntry(listEntry, sdRef)"
               title="{{ inputFormatter(listEntry) }}" role="option" type="button"
