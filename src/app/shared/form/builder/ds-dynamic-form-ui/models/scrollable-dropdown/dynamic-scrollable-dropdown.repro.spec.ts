@@ -37,7 +37,6 @@ import { APP_DATA_SERVICES_MAP } from '../../../../../../../config/app-config.in
 import { VocabularyEntry } from '../../../../../../core/submission/vocabularies/models/vocabulary-entry.model';
 import { VocabularyOptions } from '../../../../../../core/submission/vocabularies/models/vocabulary-options.model';
 import { VocabularyService } from '../../../../../../core/submission/vocabularies/vocabulary.service';
-import { FormFieldMetadataValueObject } from '../../../models/form-field-metadata-value.model';
 import { NotificationsService } from '../../../../../notifications/notifications.service';
 import {
   mockDynamicFormLayoutService,
@@ -45,6 +44,7 @@ import {
 } from '../../../../../testing/dynamic-form-mock-services';
 import { NotificationsServiceStub } from '../../../../../testing/notifications-service.stub';
 import { VocabularyServiceStub } from '../../../../../testing/vocabulary-service.stub';
+import { FormFieldMetadataValueObject } from '../../../models/form-field-metadata-value.model';
 import { DsDynamicScrollableDropdownComponent } from './dynamic-scrollable-dropdown.component';
 import { DynamicScrollableDropdownModel } from './dynamic-scrollable-dropdown.model';
 

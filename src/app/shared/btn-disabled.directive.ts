@@ -67,11 +67,11 @@ export class BtnDisabledDirective {
      * @param event The mousedown event.
      */
     @HostListener('mousedown', ['$event'])
-    handleMousedown(event: Event) {
-      if (this.isDisabled) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-      }
+  handleMousedown(event: Event) {
+    if (this.isDisabled) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
     }
+  }
 }
 
