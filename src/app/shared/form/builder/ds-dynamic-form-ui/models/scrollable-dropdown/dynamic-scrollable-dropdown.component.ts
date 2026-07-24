@@ -216,6 +216,10 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
     }
   }
 
+  /**
+   * Build the set of canonical identities already selected in the OTHER rows of
+   * the same repeatable field, so those options can be disabled/skipped.
+   */
   private getUsedSiblingValues(): Set<any> {
     const used = new Set<any>();
     const parent = this.model.parent;
@@ -226,8 +230,7 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
           rowGroup.group
             .filter((siblingModel) => siblingModel.name === this.model.name)
             .forEach((siblingModel) => {
-              const value = (siblingModel as any).value;
-              const canonical = typeof value === 'string' ? value : value?.value;
+              const canonical = this.canonicalKey((siblingModel as any).value);
               if (isNotEmpty(canonical)) {
                 used.add(canonical);
               }
@@ -237,11 +240,31 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
     return used;
   }
 
+  /**
+   * Canonical identity of a vocabulary value/entry used for duplicate detection.
+   * For authority-controlled vocabularies (e.g. Funder) the authority is the
+   * stable identity; otherwise the plain value is used. A bare string value is
+   * returned as-is.
+   */
+  private canonicalKey(entry: any): any {
+    if (isEmpty(entry)) {
+      return null;
+    }
+    if (typeof entry === 'string') {
+      return entry;
+    }
+    return isNotEmpty(entry.authority) ? entry.authority : entry.value;
+  }
+
   isOptionDisabled(entry: any): boolean {
-    return hasValue(entry) && this.usedSiblingValues.has(entry.value);
+    const canonical = this.canonicalKey(entry);
+    return isNotEmpty(canonical) && this.usedSiblingValues.has(canonical);
   }
 
   selectEntry(entry: any, sdRef: NgbDropdown) {
+    // Refresh against the live sibling values first, so a value that was chosen
+    // in another row after this dropdown was opened is still blocked at commit.
+    this.usedSiblingValues = this.getUsedSiblingValues();
     if (this.isOptionDisabled(entry)) {
       return;
     }
@@ -278,7 +301,12 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
       event.preventDefault();
       event.stopPropagation();
       if (sdRef.isOpen()) {
-        this.selectEntry(this.optionsList[this.selectedIndex], sdRef);
+        // Guard against selecting a stale/undefined entry while options are still
+        // (re)loading after a keyboard filter keystroke.
+        const candidate = this.optionsList?.[this.selectedIndex];
+        if (!this.loading && hasValue(candidate)) {
+          this.selectEntry(candidate, sdRef);
+        }
       } else {
         this.openDropdown(sdRef);
       }

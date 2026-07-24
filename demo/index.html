@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<!--
+  Focused, self-contained reproduction of the repeatable "Funder" submission dropdown
+  used to record BEFORE (merged PR #26) vs AFTER (fix) behaviour.
+
+  It replicates the EXACT duplicate-detection logic of
+  DsDynamicScrollableDropdownComponent so the visual behaviour matches the real app,
+  without needing the full DSpace backend.
+
+  Toggle with ?mode=before  or  ?mode=after
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Repeatable dropdown – duplicate prevention</title>
+  <style>
+    :root {
+      --bs-gray-200: #e9ecef;
+      --bs-dropdown-link-disabled-color: #adb5bd;
+      --bs-primary: #2b6cb0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 32px 40px; color: #1a202c; background: #f7fafc;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .mode-badge {
+      display: inline-block; font-size: 12px; font-weight: 700; letter-spacing: .5px;
+      padding: 3px 10px; border-radius: 999px; text-transform: uppercase; margin-bottom: 18px;
+    }
+    .mode-before { background: #fed7d7; color: #9b2c2c; }
+    .mode-after  { background: #c6f6d5; color: #22543d; }
+    .field-label { font-weight: 600; margin: 18px 0 8px; }
+    .row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .control { position: relative; flex: 1; }
+    .input {
+      width: 100%; height: 40px; border: 1px solid #cbd5e0; border-radius: 6px;
+      background: #fff; padding: 0 34px 0 12px; display: flex; align-items: center;
+      cursor: pointer; user-select: none; font-size: 15px; color: #2d3748;
+    }
+    .input.placeholder { color: #a0aec0; }
+    .caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #718096; pointer-events: none; }
+    .menu {
+      position: absolute; z-index: 20; top: 44px; left: 0; right: 0; background: #fff;
+      border: 1px solid #cbd5e0; border-radius: 6px; box-shadow: 0 10px 25px rgba(0,0,0,.12);
+      overflow: hidden; display: none;
+    }
+    .menu.open { display: block; }
+    .item {
+      padding: 10px 12px; cursor: pointer; font-size: 15px; border-bottom: 1px solid #edf2f7;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .item:last-child { border-bottom: none; }
+    .item:hover { background: #ebf8ff; }
+    .item.clear { font-style: italic; color: #4a5568; }
+    /* mirrors dynamic-scrollable-dropdown.component.scss .collection-item.disabled */
+    .item.disabled {
+      background-color: var(--bs-gray-200);
+      color: var(--bs-dropdown-link-disabled-color);
+      cursor: default;
+    }
+    .item.disabled:hover { background-color: var(--bs-gray-200); }
+    .item .auth { font-size: 11px; color: #a0aec0; }
+    .trash {
+      width: 40px; height: 40px; border: 1px solid #e2e8f0; border-radius: 6px; background: #fff;
+      cursor: pointer; color: #e53e3e; font-size: 16px;
+    }
+    .add-btn {
+      margin-top: 4px; border: 1px dashed #a0aec0; background: #fff; color: #2b6cb0;
+      padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;
+    }
+    .banner {
+      margin-top: 18px; padding: 12px 14px; border-radius: 6px; font-size: 14px; font-weight: 600;
+      display: none;
+    }
+    .banner.dup { display: block; background: #fff5f5; color: #9b2c2c; border: 1px solid #feb2b2; }
+    .banner.ok  { display: block; background: #f0fff4; color: #22543d; border: 1px solid #9ae6b4; }
+    .caption {
+      position: fixed; left: 0; right: 0; bottom: 0; background: rgba(17,24,39,.92); color: #fff;
+      padding: 16px 24px; font-size: 17px; line-height: 1.4; min-height: 30px;
+      transition: opacity .2s; text-align: center;
+    }
+    .step-tag { color: #90cdf4; font-weight: 700; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Submission form — repeatable “Funder” dropdown</h1>
+    <span id="modeBadge" class="mode-badge"></span>
+    <div class="field-label">Funder <span style="color:#a0aec0;font-weight:400">(repeatable, authority-controlled)</span></div>
+    <div id="rows"></div>
+    <button id="addBtn" class="add-btn" data-testid="add">＋ Add another</button>
+    <div id="banner" class="banner"></div>
+  </div>
+  <div id="caption" class="caption"></div>
+
+  <script>
+    // ----- exact vocabulary (authority-controlled, like Funder) -----
+    // Options as loaded from the vocabulary service: `value` is the DISPLAY string.
+    const FUNDERS = [
+      { authority: 'nsf', value: 'National Science Foundation', display: 'National Science Foundation' },
+      { authority: 'erc', value: 'European Research Council',    display: 'European Research Council' },
+      { authority: 'wt',  value: 'Wellcome Trust',               display: 'Wellcome Trust' },
+    ];
+
+    const MODE = new URLSearchParams(location.search).get('mode') === 'after' ? 'after' : 'before';
+
+    // ===== duplicate-detection logic =====
+    // BEFORE  = merged PR #26 (keys on `.value` only).
+    // AFTER   = fix (authority-aware canonical identity).
+    function isEmpty(v){ return v === null || v === undefined || v === ''; }
+    function isNotEmpty(v){ return !isEmpty(v); }
+
+    function canonicalBefore(v){
+      if (isEmpty(v)) return null;
+      return typeof v === 'string' ? v : v?.value;      // <-- .value only
+    }
+    function canonicalAfter(v){
+      if (isEmpty(v)) return null;
+      if (typeof v === 'string') return v;
+      return isNotEmpty(v.authority) ? v.authority : v.value;   // <-- authority ?? value
+    }
+    const canonical = MODE === 'after' ? canonicalAfter : canonicalBefore;
+
+    // ----- state -----
+    // Each row stores the value as it looks AFTER a server round-trip for an
+    // authority vocabulary: the metadata `value` is the short code, plus the authority.
+    let rows = [ null ];        // null = empty row
+    let openRow = -1;
+
+    function storedFromOption(opt){
+      // round-trip normalisation: value becomes the code, authority preserved
+      return { authority: opt.authority, value: opt.authority, display: opt.display };
+    }
+
+    function usedSiblingKeys(exceptIdx){
+      const set = new Set();
+      rows.forEach((val, idx) => {
+        if (idx === exceptIdx || isEmpty(val)) return;
+        const k = canonical(val);
+        if (isNotEmpty(k)) set.add(k);
+      });
+      return set;
+    }
+
+    function isOptionDisabled(opt, rowIdx){
+      const key = canonical(opt);
+      return isNotEmpty(key) && usedSiblingKeys(rowIdx).has(key);
+    }
+
+    // ----- rendering -----
+    const rowsEl = document.getElementById('rows');
+    const bannerEl = document.getElementById('banner');
+    const badge = document.getElementById('modeBadge');
+    badge.textContent = MODE === 'after' ? 'After (fixed)' : 'Before (PR #26)';
+    badge.className = 'mode-badge ' + (MODE === 'after' ? 'mode-after' : 'mode-before');
+
+    function selectOption(rowIdx, opt){
+      // mirrors selectEntry(): a disabled option must never be committed
+      if (opt && isOptionDisabled(opt, rowIdx)) return;
+      rows[rowIdx] = opt ? storedFromOption(opt) : null;
+      openRow = -1;
+      render();
+    }
+
+    function render(){
+      rowsEl.innerHTML = '';
+      rows.forEach((val, idx) => {
+        const row = document.createElement('div');
+        row.className = 'row';
+
+        const control = document.createElement('div');
+        control.className = 'control';
+
+        const input = document.createElement('div');
+        input.className = 'input' + (val ? '' : ' placeholder');
+        input.dataset.testid = 'input-' + idx;
+        input.textContent = val ? val.display : 'Select a funder…';
+        const caret = document.createElement('span');
+        caret.className = 'caret'; caret.textContent = '▾';
+        input.appendChild(caret);
+        input.onclick = () => { openRow = openRow === idx ? -1 : idx; render(); };
+        control.appendChild(input);
+
+        if (openRow === idx){
+          const menu = document.createElement('div');
+          menu.className = 'menu open';
+
+          const clear = document.createElement('div');
+          clear.className = 'item clear';
+          clear.textContent = 'Clear';
+          clear.onclick = () => selectOption(idx, null);
+          menu.appendChild(clear);
+
+          FUNDERS.forEach(opt => {
+            const disabled = isOptionDisabled(opt, idx);
+            const item = document.createElement('div');
+            item.className = 'item' + (disabled ? ' disabled' : '');
+            item.dataset.testid = 'opt-' + idx + '-' + opt.authority;
+            item.innerHTML = '<span>' + opt.display + '</span><span class="auth">authority: ' + opt.authority + '</span>';
+            item.onclick = () => selectOption(idx, opt);
+            menu.appendChild(item);
+          });
+          control.appendChild(menu);
+        }
+        row.appendChild(control);
+
+        const trash = document.createElement('button');
+        trash.className = 'trash'; trash.textContent = '🗑';
+        trash.dataset.testid = 'trash-' + idx;
+        trash.onclick = () => {
+          if (rows.length === 1) { rows[0] = null; } else { rows.splice(idx, 1); }
+          openRow = -1; render();
+        };
+        row.appendChild(trash);
+
+        rowsEl.appendChild(row);
+      });
+
+      // duplicate banner (by true authority identity)
+      const keys = rows.filter(isNotEmpty).map(v => v.authority);
+      const hasDup = new Set(keys).size !== keys.length;
+      if (hasDup){
+        bannerEl.className = 'banner dup';
+        bannerEl.textContent = '⚠ Duplicate funder persisted — the same authority appears in two rows.';
+      } else if (rows.filter(isNotEmpty).length >= 2){
+        bannerEl.className = 'banner ok';
+        bannerEl.textContent = '✓ No duplicates — every row references a distinct funder.';
+      } else {
+        bannerEl.className = 'banner';
+        bannerEl.textContent = '';
+      }
+    }
+
+    // ----- helpers for the recorder -----
+    window.__demo = {
+      addRow(){ rows.push(null); openRow = -1; render(); },
+      reset(){ rows = [null]; openRow = -1; render(); },
+      state(){ return JSON.parse(JSON.stringify(rows)); },
+    };
+    const capEl = document.getElementById('caption');
+    window.setCaption = (tag, text) => {
+      capEl.innerHTML = (tag ? '<span class="step-tag">' + tag + '</span>' : '') + (text || '');
+    };
+
+    document.getElementById('addBtn').onclick = () => window.__demo.addRow();
+
+    render();
+    window.setCaption('', 'Repeatable “Funder” field — ' + (MODE === 'after' ? 'AFTER the fix' : 'BEFORE (merged PR #26)'));
+  </script>
+</body>
+</html>

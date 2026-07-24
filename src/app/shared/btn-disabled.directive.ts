@@ -59,5 +59,19 @@ export class BtnDisabledDirective {
         event.stopImmediatePropagation();
       }
     }
+
+    /**
+     * Prevents the default action and stops the event from propagating when the element is disabled.
+     * Some controls (e.g. dropdown options) commit on mousedown rather than click, so a disabled
+     * element must ignore mousedown as well to stay non-interactive.
+     * @param event The mousedown event.
+     */
+    @HostListener('mousedown', ['$event'])
+    handleMousedown(event: Event) {
+      if (this.isDisabled) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }
 }
 
