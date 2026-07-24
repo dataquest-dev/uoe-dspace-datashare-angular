@@ -772,9 +772,9 @@
 
   "admin.workflow.title": "Administer Workflow",
 
-  "admin.workflow.item.workflow": "Workflow",
+  "admin.workflow.item.workflow": "In review",
 
-  "admin.workflow.item.workspace": "Workspace",
+  "admin.workflow.item.workspace": "In draft",
 
   "admin.workflow.item.delete": "Delete",
 
@@ -3476,7 +3476,7 @@
 
   "metadata-export-search.submit.error": "Starting the export has failed",
 
-  "mydspace.breadcrumbs": "Submissions",
+  "mydspace.breadcrumbs": "My submissions",
 
   "mydspace.description": "",
 
@@ -3532,9 +3532,9 @@
 
   "mydspace.search-form.placeholder": "Search in Submissions...",
 
-  "mydspace.show.workflow": "Workflow tasks",
+  "mydspace.show.workflow": "Submissions – in review",
 
-  "mydspace.show.workspace": "Submissions",
+  "mydspace.show.workspace": "My submissions",
 
   "mydspace.show.supervisedWorkspace": "Supervised items",
 
@@ -3542,15 +3542,15 @@
 
   "mydspace.status.mydspaceArchived": "Archived",
 
-  "mydspace.status.mydspaceValidation": "Validation",
+  "mydspace.status.mydspaceValidation": "For validation",
 
   "mydspace.status.mydspaceWaitingController": "Waiting for reviewer",
 
-  "mydspace.status.mydspaceWorkflow": "Workflow",
+  "mydspace.status.mydspaceWorkflow": "In review",
 
-  "mydspace.status.mydspaceWorkspace": "Workspace",
+  "mydspace.status.mydspaceWorkspace": "In draft",
 
-  "mydspace.title": "Submissions",
+  "mydspace.title": "My submissions",
 
   "mydspace.upload.upload-failed": "Error creating new workspace. Please verify the content uploaded before retry.",
 
@@ -3586,7 +3586,7 @@
 
   "nav.main.description": "Main navigation bar",
 
-  "nav.mydspace": "Submissions",
+  "nav.mydspace": "My submissions",
 
   "nav.profile": "Profile",
 
@@ -4670,13 +4670,26 @@
 
   "search.filters.namedresourcetype.Archived": "Archived",
 
-  "search.filters.namedresourcetype.Validation": "Validation",
+  "search.filters.namedresourcetype.Validation": "For validation",
 
   "search.filters.namedresourcetype.Waiting for Controller": "Waiting for reviewer",
 
-  "search.filters.namedresourcetype.Workflow": "Workflow",
+  "search.filters.namedresourcetype.Workflow": "In review",
 
-  "search.filters.namedresourcetype.Workspace": "Workspace",
+  "search.filters.namedresourcetype.Workspace": "In draft",
+
+  // dspace-api echoes the applied filter back lower-cased, and archived items
+  // come back as "item". Without these aliases the ticked checkbox and the
+  // applied-filter chip fall back to the raw token instead of a readable label.
+  "search.filters.namedresourcetype.item": "Archived",
+
+  "search.filters.namedresourcetype.validation": "For validation",
+
+  "search.filters.namedresourcetype.waitingforcontroller": "Waiting for reviewer",
+
+  "search.filters.namedresourcetype.workflow": "In review",
+
+  "search.filters.namedresourcetype.workspace": "In draft",
 
   "search.filters.withdrawn.true": "Yes",
 
@@ -4882,7 +4895,7 @@
 
   "submission.import-external.page.hint": "Enter a query above to find items from the web to import in to DSpace.",
 
-  "submission.import-external.back-to-my-dspace": "Back to Submissions",
+  "submission.import-external.back-to-my-dspace": "Back to My submissions",
 
   "submission.import-external.search.placeholder": "Search the external source",
 
@@ -5762,13 +5775,13 @@
 
   "supervisedWorkspace.search.results.head": "Supervised Items",
 
-  "workspace.search.results.head": "Submissions",
+  "workspace.search.results.head": "My submissions",
 
   "workflowAdmin.search.results.head": "Administer Workflow",
 
-  "workflow.search.results.head": "Workflow tasks",
+  "workflow.search.results.head": "Submissions – in review",
 
-  "supervision.search.results.head": "Workflow and Workspace tasks",
+  "supervision.search.results.head": "Submissions in draft and in review",
 
   "workflow-item.edit.breadcrumbs": "Edit workflowitem",
 
