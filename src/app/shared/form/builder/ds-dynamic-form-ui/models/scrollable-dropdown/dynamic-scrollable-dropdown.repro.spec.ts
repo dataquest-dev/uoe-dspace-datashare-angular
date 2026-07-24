@@ -187,7 +187,7 @@ describe('REPRO PR#26 – duplicate + clear-on-blur', () => {
     expect(comp.isOptionDisabled({ value: 'one' })).withContext('option one disabled').toBeTruthy();
   }));
 
-  it('ISSUE 1e: authority-controlled duplicate is NOT detected when display value differs but authority matches', fakeAsync(() => {
+  it('ISSUE 1e: authority-controlled duplicate IS detected via authority even when the display value differs', fakeAsync(() => {
     const arr = buildArray(2);
     // Sibling as it looks after a server round-trip for an authority vocabulary (Funder):
     // short value 'NSF' with an authority key.
