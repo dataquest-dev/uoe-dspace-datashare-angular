@@ -5,19 +5,19 @@
 
   // DSpace default: "DSpace Angular :: "
   "repository.title.prefix": "Edinburgh DataShare :: ",
-  "mydspace.breadcrumbs": "Submissions",
+  "mydspace.breadcrumbs": "My submissions",
   "mydspace.search-form.placeholder": "Search in Submissions...",
-  "mydspace.title": "Submissions",
-  "nav.mydspace": "Submissions",
-  "submission.import-external.back-to-my-dspace": "Back to Submissions",
+  "mydspace.title": "My submissions",
+  "nav.mydspace": "My submissions",
+  "submission.import-external.back-to-my-dspace": "Back to My submissions",
 
   // DataShare customised
 
   "submission.sections.submit.progressbar.datashare.license": "End-user Licence",
   "submission.sections.submit.progressbar.license": "Depositor Agreement",
   "mydspace.results.head": "Submissions",
-  "mydspace.show.workspace": "Submissions",
-  "workspace.search.results.head": "Submissions",
+  "mydspace.show.workspace": "My submissions",
+  "workspace.search.results.head": "My submissions",
 
 
   "submission.sections.submit.datashare.dropzone": "TBD: INSTRUCTIONS FOR DROPZONE.",
@@ -122,35 +122,40 @@
   "menu.section.browse_global_by_dateavailable": "By Available Date",
   "menu.section.browse_global_by_dateembargo": "By Embargo Date",
 
-  // Search filters re-named
+  // Submission status wording (LUC070-260).
+  // Supersedes the December 2025 scheme, which mapped workspace -> "In review"
+  // and workflow -> "Draft" (the wrong way round) and was reverted from
+  // src/assets/i18n/en.json5 in 457b86ac9 while staying behind here.
+
+  // Status facet values as Solr reports them.
   "search.filters.namedresourcetype.Archived": "Archived",
-  "search.filters.namedresourcetype.Validation": "Validation",
-  "search.filters.namedresourcetype.Waiting for Controller": "Pool",
-  "search.filters.namedresourcetype.Workflow": "Draft",
-  "search.filters.namedresourcetype.Workspace": "In review",
+  "search.filters.namedresourcetype.Validation": "For validation",
+  "search.filters.namedresourcetype.Waiting for Controller": "Waiting for reviewer",
+  "search.filters.namedresourcetype.Workflow": "In review",
+  "search.filters.namedresourcetype.Workspace": "In draft",
 
-  "admin.workflow.item.workspace": "In review",
-  "item.version.history.table.workspaceItem": "In review item",
-  "item.version.history.table.action.editWorkspaceItem": "Edit in review item",
-  "mydspace.show.supervisedWorkspace": "In review items",
-  "mydspace.status.mydspaceWorkspace": "In review",
-  "search.filters.namedresourcetype.Workspace": "In review",
-  "supervisedWorkspace.search.results.head": "In Review Items",
-  "supervision.search.results.head": "Draft and In Review tasks",
-  "workspace-item.view.breadcrumbs": "In Review View",
-  "workspace-item.view.title": "In Review View",
-  "workspace-item.delete.breadcrumbs": "In Review Delete",
+  // The same values keyed by the token dspace-api echoes back in appliedFilters:
+  // lower-cased, and "item" for archived. Without these the ticked checkbox and
+  // the applied-filter chip fall back to the raw token ("item", "waitingforcontroller").
+  "search.filters.namedresourcetype.item": "Archived",
+  "search.filters.namedresourcetype.validation": "For validation",
+  "search.filters.namedresourcetype.waitingforcontroller": "Waiting for reviewer",
+  "search.filters.namedresourcetype.workflow": "In review",
+  "search.filters.namedresourcetype.workspace": "In draft",
 
-  "admin.workflow.breadcrumbs": "Administer Draft Items",
-  "admin.workflow.title": "Administer Draft Items",
-  "admin.workflow.item.workflow": "Draft",
-  "item.version.history.table.workflowItem": "Draft item",
-  "menu.section.workflow": "Administer Draft Items",
-  "mydspace.show.workflow": "Draft Items tasks",
-  "mydspace.status.mydspaceWorkflow": "Draft",
-  "search.filters.namedresourcetype.Workflow": "Draft",
-  "workflowAdmin.search.results.head": "Administer Draft Items",
-  "workflow.search.results.head": "Draft Items tasks",
+  // "Show" dropdown option and the page heading beside it: two separate key families.
+  "mydspace.show.workflow": "Submissions – in review",
+  "workflow.search.results.head": "Submissions – in review",
+
+  // Coloured status badges on result cards.
+  "mydspace.status.mydspaceValidation": "For validation",
+  "mydspace.status.mydspaceWorkflow": "In review",
+  "mydspace.status.mydspaceWorkspace": "In draft",
+
+  // Administer Workflow carries its own badge and heading keys.
+  "admin.workflow.item.workflow": "In review",
+  "admin.workflow.item.workspace": "In draft",
+  "supervision.search.results.head": "Submissions in draft and in review",
 
 
   // Custom components

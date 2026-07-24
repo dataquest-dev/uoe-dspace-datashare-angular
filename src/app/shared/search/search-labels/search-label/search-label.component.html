@@ -1,5 +1,6 @@
+<!-- DATASHARE - start: aria-label announces the translated value, not the raw Solr token (LUC070-260) -->
 <a class="badge badge-primary"
-   [attr.aria-label]="'search.filters.remove' | translate:{ type: ('search.filters.applied.f.' + appliedFilter.filter) | translate, value: appliedFilter.label }"
+   [attr.aria-label]="'search.filters.remove' | translate:{ type: ('search.filters.applied.f.' + appliedFilter.filter) | translate, value: ('search.filters.' + appliedFilter.filter + '.' + appliedFilter.label | translate: { default: appliedFilter.label }) }"
    [routerLink]="searchLink"
    [queryParams]="(removeParameters$ | async)"
    (click)="searchFilterService.minimizeAll()">
@@ -8,3 +9,4 @@
     <span class="pl-2" aria-hidden="true">×</span>
   </span>
 </a>
+<!-- DATASHARE - end -->

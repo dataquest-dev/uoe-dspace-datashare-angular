@@ -129,7 +129,13 @@ export class SearchFacetOptionComponent implements OnInit {
    * Announces to the screen reader that the page will be reloaded, which filter has been selected
    */
   announceFilter() {
-    const message = this.translateService.instant('search-facet-option.update.announcement', { filter: this.filterValue.value });
+    // DATASHARE - start: announce the same label the checkbox shows, not the raw Solr value (LUC070-260)
+    const label = this.translateService.instant(
+      `search.filters.${this.filterConfig.name}.${this.filterValue.value}`,
+      { default: this.filterValue.value },
+    );
+    const message = this.translateService.instant('search-facet-option.update.announcement', { filter: label });
+    // DATASHARE - end
     this.liveRegionService.addMessage(message);
   }
 }
