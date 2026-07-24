@@ -78,7 +78,7 @@
   --ds-edit-item-metadata-field-width: 190px;
   --ds-edit-item-language-field-width: 43px;
 
-  --ds-thumbnail-max-width: 125px;
+  --ds-thumbnail-max-width: 175px;
   --ds-thumbnail-placeholder-background: #{$gray-100};
   --ds-thumbnail-placeholder-border: 1px solid #{$gray-300};
   --ds-thumbnail-placeholder-color: #{lighten($gray-800, 7%)};
@@ -126,7 +126,7 @@
   --ds-dso-edit-actions-width: 173px;
   --ds-dso-edit-virtual-tooltip-min-width: 300px;
 
-  --ds-comcol-logo-max-width: 500px;
+  --ds-comcol-logo-max-width: 100%;
   --ds-comcol-logo-max-height: 500px;
 
   --ds-primary-bg: #{$ds-primary-bg};
