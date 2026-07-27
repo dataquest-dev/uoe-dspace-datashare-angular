@@ -1,4 +1,5 @@
-<div #sdRef="ngbDropdown" ngbDropdown display="dynamic" placement="bottom-right" class="w-100">
+<div #sdRef="ngbDropdown" ngbDropdown display="dynamic" placement="bottom-right" class="w-100"
+     (openChange)="onOpenChange($event)">
   <div class="position-relative right-addon"
        role="combobox"
        [attr.aria-label]="model.label"
@@ -41,12 +42,10 @@
          [scrollWindow]="false">
 
       <button class="dropdown-item disabled" type="button" *ngIf="optionsList && optionsList.length === 0">{{'form.no-results' | translate}}</button>
-      <button class="dropdown-item collection-item text-truncate"
-              (click)="onSelect(undefined); sdRef.close()" (mousedown)="onSelect(undefined); sdRef.close()"
-              title="{{ 'dropdown.clear.tooltip' | translate }}" role="option"
-              type="button">
-        <i>{{ 'dropdown.clear' | translate }}</i>
-      </button>
+      <!-- Options commit on (mousedown) rather than (click) by design: blurring the input flips
+           showErrorMessages on a required field, and DsDynamicFormControlContainerComponent then
+           destroys and re-creates this control (forceShowErrorDetection), so the option element is
+           already gone by the time a click event could be produced. -->
       <button class="dropdown-item collection-item text-truncate" *ngFor="let listEntry of optionsList; let i = index"
               [class.active]="i === selectedIndex"
               [attr.aria-selected]="inputFormatter(listEntry) === (currentValue | async)"
@@ -57,6 +56,16 @@
         {{inputFormatter(listEntry)}}
       </button>
       <div class="scrollable-dropdown-loading text-center" *ngIf="loading"><p>{{'form.loading' | translate}}</p></div>
+      <!-- Clearing is destructive and must sit at the END of the menu. As the first entry it was
+           rendered directly beneath the input, exactly where a click meant to close the menu lands,
+           so dismissing the dropdown wiped the value instead.
+           A single handler: carrying both (click) and (mousedown) fired it twice per interaction. -->
+      <button class="dropdown-item collection-item text-truncate scrollable-dropdown-clear"
+              (mousedown)="onSelect(undefined); sdRef.close()"
+              title="{{ 'dropdown.clear.tooltip' | translate }}" role="option"
+              type="button">
+        <i>{{ 'dropdown.clear' | translate }}</i>
+      </button>
     </div>
 
   </div>

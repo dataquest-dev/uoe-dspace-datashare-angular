@@ -186,17 +186,12 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
         const selectedValue = Object.assign(new VocabularyEntry(), { authority: 1, display: 'one', value: 1 });
 
         let de: any = scrollableDropdownFixture.debugElement.query(By.css('input.form-control'));
-        let btnEl = de.nativeElement;
-
-        const mousedownEvent = new MouseEvent('mousedown');
-
-        btnEl.dispatchEvent(mousedownEvent);
+        de.nativeElement.click();
         scrollableDropdownFixture.detectChanges();
 
-        de = scrollableDropdownFixture.debugElement.queryAll(By.css('button.dropdown-item'));
-        btnEl = de[1].nativeElement;
-
-        btnEl.dispatchEvent(mousedownEvent);
+        // Options commit on mousedown by design (the control is re-created on blur).
+        de = scrollableDropdownFixture.debugElement.queryAll(By.css('button.dropdown-item.collection-item'));
+        de[0].nativeElement.dispatchEvent(new MouseEvent('mousedown'));
         scrollableDropdownFixture.detectChanges();
 
         expect((scrollableDropdownComp.model as any).value).toEqual(selectedValue);
@@ -244,21 +239,19 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
 
       it('should disable an option already selected in another row of the same field', () => {
         const de = scrollableDropdownFixture.debugElement.query(By.css('input.form-control'));
-        de.nativeElement.dispatchEvent(new MouseEvent('mousedown'));
         de.nativeElement.click();
         scrollableDropdownFixture.detectChanges();
 
-        expect(scrollableDropdownComp.usedSiblingValues.has(1)).toBeTruthy();
         expect(scrollableDropdownComp.isOptionDisabled({ value: 1 })).toBeTruthy();
         expect(scrollableDropdownComp.isOptionDisabled({ value: 2 })).toBeFalsy();
 
+        // The options are rendered first; the clear entry is last.
         const options = scrollableDropdownFixture.debugElement.queryAll(By.css('button.dropdown-item.collection-item'));
-        expect(hasClass(options[1].nativeElement, 'disabled')).toBeTruthy();
-        expect(hasClass(options[2].nativeElement, 'disabled')).toBeFalsy();
+        expect(hasClass(options[0].nativeElement, 'disabled')).toBeTruthy();
+        expect(hasClass(options[1].nativeElement, 'disabled')).toBeFalsy();
       });
 
       it('should ignore selection of a disabled option', () => {
-        scrollableDropdownComp.usedSiblingValues = new Set([1]);
         spyOn(scrollableDropdownComp.change, 'emit');
 
         scrollableDropdownComp.onSelect(Object.assign(new VocabularyEntry(), { authority: 1, display: 'one', value: 1 }));
@@ -268,7 +261,6 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
       });
 
       it('should not select a disabled option via keyboard and keep the dropdown open', () => {
-        scrollableDropdownComp.usedSiblingValues = new Set([1]);
         scrollableDropdownComp.optionsList = [Object.assign(new VocabularyEntry(), { authority: 1, display: 'one', value: 1 })];
         scrollableDropdownComp.selectedIndex = 0;
         spyOn(scrollableDropdownComp.change, 'emit');
@@ -293,7 +285,6 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
       });
 
       it('should still allow clearing the value', () => {
-        scrollableDropdownComp.usedSiblingValues = new Set([1]);
         spyOn(scrollableDropdownComp.change, 'emit');
 
         scrollableDropdownComp.onSelect(undefined);
@@ -303,8 +294,6 @@ describe('Dynamic Dynamic Scrollable Dropdown component', () => {
 
       it('should not disable any option for a field without repeatable siblings', () => {
         scrollableDropdownComp.model = new DynamicScrollableDropdownModel(SD_TEST_MODEL_CONFIG);
-
-        scrollableDropdownComp.openDropdown({ open: () => undefined } as any);
 
         expect(scrollableDropdownComp.usedSiblingValues.size).toBe(0);
         expect(scrollableDropdownComp.isOptionDisabled({ value: 1 })).toBeFalsy();

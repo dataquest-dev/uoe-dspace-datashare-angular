@@ -306,7 +306,10 @@ export class DsDynamicFormControlContainerComponent extends DynamicFormControlCo
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes && !this.isRelationship && hasValue(this.group.get(this.model.id))) {
+    // `group` can legitimately be null for one tick while a repeatable field is being re-rendered
+    // (a row was added or removed). Dereferencing it there threw inside change detection and
+    // aborted the pass for the whole field, so the remaining rows stopped updating.
+    if (changes && !this.isRelationship && hasValue(this.group) && hasValue(this.group.get(this.model.id))) {
       super.ngOnChanges(changes);
       if (this.model && this.model.placeholder) {
         this.model.placeholder = this.translateService.instant(this.model.placeholder);

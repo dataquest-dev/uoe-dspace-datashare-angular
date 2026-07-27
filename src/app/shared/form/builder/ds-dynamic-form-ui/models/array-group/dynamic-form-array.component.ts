@@ -19,10 +19,12 @@ import {
 } from '@angular/core';
 import {
   ReactiveFormsModule,
+  UntypedFormArray,
   UntypedFormGroup,
 } from '@angular/forms';
 import {
   DynamicFormArrayComponent,
+  DynamicFormArrayGroupModel,
   DynamicFormControlCustomEvent,
   DynamicFormControlEvent,
   DynamicFormControlLayout,
@@ -96,7 +98,7 @@ export class DsDynamicFormArrayComponent extends DynamicFormArrayComponent {
       return;
     }
 
-    this.model.moveGroup(event.previousIndex, event.currentIndex - event.previousIndex);
+    this.moveGroupAndControl(event.previousIndex, event.currentIndex);
     const prevIndex = event.previousIndex;
     const index = event.currentIndex;
 
@@ -127,16 +129,38 @@ export class DsDynamicFormArrayComponent extends DynamicFormArrayComponent {
   }
 
   /**
-   * Gets the control of the specified group model. It adds the startingIndex property to the group model if it does not
-   * already have it. This ensures that the controls are always linked to the correct group model.
+   * Moves a row, keeping the group models and the form controls in the same order.
+   *
+   * Both are addressed by the same live index (see {@link getControlOfGroup}), so reordering only
+   * the models would leave every row from the drop position onwards pointing at another row's
+   * control — which is how values ended up moving between rows.
+   *
+   * @param from The index the row is moved from.
+   * @param to The index the row is moved to.
+   */
+  protected moveGroupAndControl(from: number, to: number): void {
+    const controls = this.control as unknown as UntypedFormArray;
+    if (hasValue(controls?.at(from))) {
+      const moved = controls.at(from);
+      controls.removeAt(from, { emitEvent: false });
+      controls.insert(to, moved, { emitEvent: false });
+    }
+    this.model.moveGroup(from, to - from);
+  }
+
+  /**
+   * Gets the control of the specified group model.
+   *
+   * The group's *live* index is the only authority: `DynamicFormArrayModel` re-indexes its groups
+   * on every insert/remove/move, and the template binds `formGroupName` to that same index. Caching
+   * the index of the first render instead would leave a row pointing at another row's control (or at
+   * none) as soon as a row is added or removed, which silently moves values between rows.
+   *
    * @param groupModel The group model to get the control for.
    * @returns The form control of the specified group model.
    */
-  getControlOfGroup(groupModel: any) {
-    if (!groupModel.hasOwnProperty('startingIndex')) {
-      groupModel.startingIndex = groupModel.index;
-    }
-    return this.control.get([groupModel.startingIndex]);
+  getControlOfGroup(groupModel: DynamicFormArrayGroupModel) {
+    return this.control.get([groupModel.index]);
   }
 
   /**
@@ -200,7 +224,7 @@ export class DsDynamicFormArrayComponent extends DynamicFormArrayComponent {
     }
 
     if (this.elementBeingSorted) {
-      this.model.moveGroup(idx, newIndex - idx);
+      this.moveGroupAndControl(idx, newIndex);
       if (hasValue(this.model.groups[newIndex]) && hasValue((this.control as any).controls[newIndex])) {
         this.onCustomEvent({
           previousIndex: idx,
