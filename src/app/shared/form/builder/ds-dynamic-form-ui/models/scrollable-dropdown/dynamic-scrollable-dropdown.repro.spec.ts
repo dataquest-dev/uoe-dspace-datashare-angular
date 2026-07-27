@@ -152,7 +152,7 @@ describe('REPRO PR#26 – duplicate + clear-on-blur', () => {
     bindComponentToRow(arr.get(1).group[0] as any);        // component = row1
     comp.openDropdown(fakeRef);
     tick();
-    expect(comp.usedSiblingValues.has(1)).withContext('value 1 used by row0').toBeTruthy();
+    expect(comp.isOptionDisabled(entry(1))).withContext('value 1 used by row0').toBeTruthy();
     expect(comp.isOptionDisabled({ value: 1 })).withContext('option 1 disabled').toBeTruthy();
     expect(comp.isOptionDisabled({ value: 2 })).withContext('option 2 free').toBeFalsy();
   }));
@@ -183,7 +183,6 @@ describe('REPRO PR#26 – duplicate + clear-on-blur', () => {
     bindComponentToRow(arr.get(1).group[0] as any);
     comp.openDropdown(fakeRef);
     tick();
-    expect(comp.usedSiblingValues.has('one')).withContext('FFMVO.value=one collected').toBeTruthy();
     expect(comp.isOptionDisabled({ value: 'one' })).withContext('option one disabled').toBeTruthy();
   }));
 

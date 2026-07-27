@@ -103,8 +103,6 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
   public selectedIndex = 0;
   public acceptableKeys = ['Space', 'NumpadMultiply', 'NumpadAdd', 'NumpadSubtract', 'NumpadDecimal', 'Semicolon', 'Equal', 'Comma', 'Minus', 'Period', 'Quote', 'Backquote'];
 
-  public usedSiblingValues: Set<any> = new Set();
-
   /**
    * If true the component can rely on the findAll method for data loading.
    * This is a behaviour activated by dependency injection through the dropdown config.
@@ -207,20 +205,34 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
    */
   openDropdown(sdRef: NgbDropdown) {
     if (!this.model.readOnly) {
-      this.group.markAsUntouched();
-      this.inputText = null;
-      this.usedSiblingValues = this.getUsedSiblingValues();
-      this.updatePageInfo(this.model.maxOptions, 1);
-      this.loadOptions(false);
       sdRef.open();
     }
   }
 
   /**
-   * Build the set of canonical identities already selected in the OTHER rows of
-   * the same repeatable field, so those options can be disabled/skipped.
+   * Called by the NgbDropdown itself, so it covers every way the menu can be opened — the input,
+   * the keyboard, and the toggle caret, which opens the menu through the directive without going
+   * through {@link openDropdown} and therefore used to show an unfiltered, stale option list.
+   *
+   * @param open Whether the dropdown is now open.
    */
-  private getUsedSiblingValues(): Set<any> {
+  onOpenChange(open: boolean) {
+    if (open) {
+      this.group.markAsUntouched();
+      this.inputText = null;
+      this.updatePageInfo(this.model.maxOptions, 1);
+      this.loadOptions(false);
+    }
+  }
+
+  /**
+   * The identities already selected in the OTHER rows of the same repeatable field.
+   *
+   * Always read from the live models. A snapshot taken when the dropdown was opened went stale as
+   * soon as any row was added, removed or edited, which both hid options that had become free again
+   * and offered options that were in use.
+   */
+  get usedSiblingValues(): Set<any> {
     const used = new Set<any>();
     const parent = this.model.parent;
     if (parent instanceof DynamicFormArrayGroupModel) {
@@ -230,10 +242,7 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
           rowGroup.group
             .filter((siblingModel) => siblingModel.name === this.model.name)
             .forEach((siblingModel) => {
-              const canonical = this.canonicalKey((siblingModel as any).value);
-              if (isNotEmpty(canonical)) {
-                used.add(canonical);
-              }
+              this.identityKeys((siblingModel as any).value).forEach((key) => used.add(key));
             });
         });
     }
@@ -241,30 +250,41 @@ export class DsDynamicScrollableDropdownComponent extends DsDynamicVocabularyCom
   }
 
   /**
-   * Canonical identity of a vocabulary value/entry used for duplicate detection.
-   * For authority-controlled vocabularies (e.g. Funder) the authority is the
-   * stable identity; otherwise the plain value is used. A bare string value is
-   * returned as-is.
+   * Every identity a vocabulary value can be recognised by.
+   *
+   * The same entry reaches this component in two different shapes: as a `VocabularyEntry` when it
+   * was picked in this session, and as a `FormFieldMetadataValueObject` when it was rebuilt from
+   * the stored metadata — and only one of the two may carry an authority. Comparing a single
+   * "canonical" key therefore missed duplicates whenever the two sides disagreed about it, so both
+   * the authority and the normalised value are emitted and a match on either one is a duplicate.
    */
-  private canonicalKey(entry: any): any {
+  private identityKeys(entry: any): string[] {
     if (isEmpty(entry)) {
-      return null;
+      return [];
     }
     if (typeof entry === 'string') {
-      return entry;
+      return [`v:${entry.trim().toLowerCase()}`];
     }
-    return isNotEmpty(entry.authority) ? entry.authority : entry.value;
+    const keys = [];
+    if (isNotEmpty(entry.authority)) {
+      keys.push(`a:${entry.authority}`);
+    }
+    if (isNotEmpty(entry.value)) {
+      keys.push(`v:${String(entry.value).trim().toLowerCase()}`);
+    }
+    return keys;
   }
 
   isOptionDisabled(entry: any): boolean {
-    const canonical = this.canonicalKey(entry);
-    return isNotEmpty(canonical) && this.usedSiblingValues.has(canonical);
+    const keys = this.identityKeys(entry);
+    if (isEmpty(keys)) {
+      return false;
+    }
+    const used = this.usedSiblingValues;
+    return keys.some((key) => used.has(key));
   }
 
   selectEntry(entry: any, sdRef: NgbDropdown) {
-    // Refresh against the live sibling values first, so a value that was chosen
-    // in another row after this dropdown was opened is still blocked at commit.
-    this.usedSiblingValues = this.getUsedSiblingValues();
     if (this.isOptionDisabled(entry)) {
       return;
     }

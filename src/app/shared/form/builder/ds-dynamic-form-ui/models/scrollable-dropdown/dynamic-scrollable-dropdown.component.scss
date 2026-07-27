@@ -30,6 +30,16 @@
   left: 0 !important;
   margin-bottom: var(--bs-spacer);
   z-index: 1000;
+  // The menu is positioned flush against the input and covers the rows underneath it. Keeping a
+  // small gap leaves a strip right below the field where a click closes the menu instead of
+  // activating whichever entry happens to be drawn there.
+  margin-top: 0.35rem;
+}
+
+// Clearing is separated from the options so it cannot be hit by accident.
+.collection-item.scrollable-dropdown-clear {
+  border-bottom: 0;
+  border-top: calc(var(--bs-dropdown-border-width) * 2) solid var(--bs-dropdown-border-color);
 }
 
 .scrollable-dropdown-toggle {
