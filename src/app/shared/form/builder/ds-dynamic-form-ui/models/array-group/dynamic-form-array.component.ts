@@ -252,7 +252,7 @@ export class DsDynamicFormArrayComponent extends DynamicFormArrayComponent {
   }
 
   cancelKeyboardDragAndDrop(sortableElement: HTMLDivElement, index: number, length: number) {
-    this.model.moveGroup(index, this.elementBeingSortedStartingIndex - index);
+    this.moveGroupAndControl(index, this.elementBeingSortedStartingIndex);
     if (hasValue(this.model.groups[this.elementBeingSortedStartingIndex]) && hasValue((this.control as any).controls[this.elementBeingSortedStartingIndex])) {
       this.onCustomEvent({
         previousIndex: index,

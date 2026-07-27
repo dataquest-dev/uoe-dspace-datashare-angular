@@ -291,6 +291,17 @@ describe('DsDynamicScrollableDropdownComponent duplicate/clearing regressions', 
         .withContext('the first entry of the menu must not be the clear action').toBeFalsy();
     });
 
+    it('clears from the keyboard as well as the mouse', () => {
+      // The options are reachable with Enter; dropping the clear entry's (click) handler in favour
+      // of (mousedown) must not leave it mouse-only.
+      const clear = fixture.debugElement.query(By.css('button.dropdown-item.scrollable-dropdown-clear'));
+      spyOn(comp, 'onSelect');
+
+      clear.nativeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+      expect(comp.onSelect).toHaveBeenCalledTimes(1);
+    });
+
     it('keeps the clear entry available (further down the menu)', () => {
       const clear = fixture.debugElement.query(By.css('button.dropdown-item.scrollable-dropdown-clear'));
       expect(clear).withContext('clearing must still be possible').not.toBeNull();

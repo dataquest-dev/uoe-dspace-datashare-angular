@@ -19,6 +19,7 @@ import {
   ReactiveFormsModule,
   UntypedFormArray,
 } from '@angular/forms';
+import { By } from '@angular/platform-browser';
 import {
   DYNAMIC_FORM_CONTROL_MAP_FN,
   DynamicFormLayoutService,
@@ -171,6 +172,37 @@ describe('DsDynamicFormArrayComponent row/control binding', () => {
 
     expect(boundValue(0)).withContext('Book moved up into position 0').toBe('Book');
     expect(boundValue(1)).withContext('Dataset moved up into position 1').toBe('Dataset');
+  });
+
+  it('keeps rows and controls in sync when a keyboard reorder is cancelled', () => {
+    const dropList = fixture.debugElement.query(By.css('.cdk-drop-list')).nativeElement;
+    const rowEl = dropList.querySelectorAll('[cdkDrag]')[0] as HTMLDivElement;
+
+    // Pick row 0 up, move it down twice, then abandon the reorder with Escape.
+    component.toggleKeyboardDragAndDrop(new KeyboardEvent('keydown', { key: ' ' }), rowEl, 0, 3);
+    component.handleArrowPress(new KeyboardEvent('keydown', { key: 'ArrowDown' }), dropList, 3, 0, 'down');
+    component.handleArrowPress(new KeyboardEvent('keydown', { key: 'ArrowDown' }), dropList, 3, 1, 'down');
+    fixture.detectChanges();
+
+    component.cancelKeyboardDragAndDrop(rowEl, 2, 3);
+    fixture.detectChanges();
+
+    expect([boundValue(0), boundValue(1), boundValue(2)])
+      .withContext('cancelling must restore the original order for models AND controls')
+      .toEqual(['Article', 'Book', 'Dataset']);
+  });
+
+  it('keeps rows and controls in sync through a completed keyboard reorder', () => {
+    const dropList = fixture.debugElement.query(By.css('.cdk-drop-list')).nativeElement;
+    const rowEl = dropList.querySelectorAll('[cdkDrag]')[0] as HTMLDivElement;
+
+    component.toggleKeyboardDragAndDrop(new KeyboardEvent('keydown', { key: ' ' }), rowEl, 0, 3);
+    component.handleArrowPress(new KeyboardEvent('keydown', { key: 'ArrowDown' }), dropList, 3, 0, 'down');
+    fixture.detectChanges();
+
+    expect([boundValue(0), boundValue(1), boundValue(2)])
+      .withContext('Article moved down one place, controls followed')
+      .toEqual(['Book', 'Article', 'Dataset']);
   });
 
   it('rebinds after a row is inserted in the middle', () => {
