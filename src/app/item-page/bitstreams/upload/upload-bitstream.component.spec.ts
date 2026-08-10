@@ -14,6 +14,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { TranslateModule } from '@ngx-translate/core';
 import { of as observableOf } from 'rxjs';
 
+import { DefaultAppConfig } from '../../../../config/default-app-config';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/auth/auth.service';
 import { BundleDataService } from '../../../core/data/bundle-data.service';
@@ -278,6 +279,48 @@ describe('UploadBitstreamComponent', () => {
         // noinspection JSDeprecatedSymbols
         expect(comp.bundles[i].name).toEqual(expectedSuggestions[i]);
       }
+    });
+  });
+
+  describe('when the shipped default bundle configuration is used', () => {
+    const shippedStandardBundles = new DefaultAppConfig().bundle.standardBundles;
+    let originalStandardBundles: string[];
+
+    beforeEach(() => {
+      originalStandardBundles = environment.bundle.standardBundles;
+      environment.bundle.standardBundles = shippedStandardBundles;
+    });
+
+    afterEach(() => {
+      environment.bundle.standardBundles = originalStandardBundles;
+    });
+
+    describe('and the item has no bundles yet', () => {
+      beforeEach(waitForAsync(() => {
+        createUploadBitstreamTestingModule({});
+        jasmine.getEnv().allowRespy(true);
+        mockItemDataService.getBundles.and.returnValue(createSuccessfulRemoteDataObject$(buildPaginatedList(new PageInfo(), [])));
+        loadFixtureAndComp();
+      }));
+
+      it('should offer CC-LICENSE as a bundle to upload a bitstream to', () => {
+        // noinspection JSDeprecatedSymbols
+        expect(comp.bundles.map((suggestion: Bundle) => suggestion.name)).toContain('CC-LICENSE');
+      });
+    });
+
+    describe('and the item already has other bundles', () => {
+      beforeEach(waitForAsync(() => {
+        createUploadBitstreamTestingModule({});
+        jasmine.getEnv().allowRespy(true);
+        mockItemDataService.getBundles.and.returnValue(createSuccessfulRemoteDataObject$(buildPaginatedList(new PageInfo(), [bundle])));
+        loadFixtureAndComp();
+      }));
+
+      it('should offer CC-LICENSE as a bundle to upload a bitstream to', () => {
+        // noinspection JSDeprecatedSymbols
+        expect(comp.bundles.map((suggestion: Bundle) => suggestion.name)).toContain('CC-LICENSE');
+      });
     });
   });
 
